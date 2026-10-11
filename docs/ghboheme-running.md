@@ -59,7 +59,9 @@ Saved stories retain their event evidence. Cache, connectors, alert history and
 editable drafts use bounded local storage. Blocked writes report session-only state.
 Interests and saved news join the existing account-sync/backup key list, with
 old-client absence tolerance. Cloud syncing requires the original account flow and
-its feature flag; this workspace does not add a second account backend. Drafts and
+its feature flag; this workspace starts the existing reconciler for signed-in
+accounts when enabled and unsubscribes when destroyed. This workspace does not add
+a second account backend. Drafts and
 connector settings are local. Offline PWA navigation shows a self-contained,
 safely rendered snapshot of saved/cached news; reconnecting restores the full UI.
 

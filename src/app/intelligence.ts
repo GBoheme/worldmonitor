@@ -43,6 +43,12 @@ export async function initIntelligence(): Promise<void> {
   document.querySelector('.app-heading')?.remove();
   document.documentElement.classList.remove('wm-pro-banner-reserved');
   const workspace = new IntelligenceWorkspace(root, defaultSources());
+  const lifetime = new AbortController();
   workspace.mount();
-  window.addEventListener('pagehide', () => workspace.destroy(), { once: true });
+  window.addEventListener('pagehide', () => { lifetime.abort(); workspace.destroy(); }, { once: true });
+  if (import.meta.env.VITE_CLOUD_PREFS_ENABLED === 'true') {
+    void import('@/services/intelligence-account')
+      .then(({ startIntelligenceAccountSync }) => startIntelligenceAccountSync('full', lifetime.signal))
+      .catch(() => { /* Local preferences remain available when account initialization is unavailable. */ });
+  }
 }
