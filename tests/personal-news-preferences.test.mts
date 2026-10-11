@@ -45,6 +45,14 @@ describe('GBoheme personal news preferences', () => {
     assert.deepEqual(titles, [list[1]!.title, list[2]!.title]);
   });
 
+  it('always retains high-threat or breaking alerts when their topic is disabled', () => {
+    const prefs = defaultPersonalNewsPreferences();
+    prefs.categories.energy_oil = false;
+    const urgent = { ...item('OPEC crude oil prices'), isAlert: true };
+    const high = { ...item('Brent crude oil prices'), threat: { level: 'high' as const, category: 'conflict' as never, confidence: 0.9, source: 'keyword' as const } };
+    assert.deepEqual(filterPersonalNews([urgent, high], prefs), [urgent, high]);
+  });
+
   it('deduplicates tracking-link copies without suppressing other publishers', () => {
     const news = [
       item('Major discovery', 'Reuters', 'https://example.com/a?utm_source=x'),
