@@ -187,7 +187,7 @@ export class IntelligenceConnector {
       if (!release || release.draft === true || release.prerelease === true) return [];
       const url = canonicalPersonalNewsUrl(text(release.html_url, 2000));
       const date = new Date(text(release.published_at, 50));
-      if (!url || new URL(url).origin !== 'https://github.com' || !new URL(url).pathname.startsWith(`/${this.config.target}/releases/`)) return [];
+      if (!url || new URL(url).origin !== 'https://github.com' || !new URL(url).pathname.toLowerCase().startsWith(`/${this.config.target.toLowerCase()}/releases/`)) return [];
       const version = text(release.tag_name, 100);
       return [{ source, title: `GitHub ${this.config.target} · ${text(release.name, 200) || version}`,
         link: url, pubDate: Number.isFinite(date.getTime()) ? date : new Date(0), pubDateMissing: !Number.isFinite(date.getTime()),

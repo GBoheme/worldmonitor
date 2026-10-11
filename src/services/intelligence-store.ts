@@ -40,7 +40,7 @@ function parseArticle(value: unknown): IntelligenceArticle | null {
   const release = object(record.officialRelease);
   const category = ['conflict', 'protest', 'disaster', 'diplomatic', 'economic', 'terrorism', 'cyber', 'health', 'environmental', 'military', 'crime', 'infrastructure', 'tech', 'general'].includes(String(level?.category))
     ? level?.category as NonNullable<IntelligenceArticle['threat']>['category'] : 'general';
-  return { title: record.title.slice(0, 500), source: record.source.slice(0, 120), link: record.link.slice(0, 2000),
+  return { title: record.title.slice(0, 500), source: record.source.slice(0, 200), link: record.link.slice(0, 2000),
     pubDate: Number.isFinite(pubDate.getTime()) ? pubDate : new Date(0), pubDateMissing: record.pubDateMissing === true || typeof record.pubDate !== 'string' || !Number.isFinite(pubDate.getTime()) || pubDate.getTime() <= 0,
     isAlert: record.isAlert === true, snippet: typeof record.snippet === 'string' ? record.snippet.slice(0, 400) : undefined,
     lang: typeof record.lang === 'string' ? record.lang.slice(0, 10) : undefined,
@@ -56,10 +56,10 @@ function serializeArticles(items: IntelligenceArticle[]): unknown[] {
   return items.map(item => ({ ...item, pubDate: Number.isFinite(item.pubDate.getTime()) ? item.pubDate.toISOString() : null }));
 }
 export function getIntelligenceArticles(kind: 'saved' | 'cache'): IntelligenceArticle[] {
-  return read(INTELLIGENCE_STORE_KEYS[kind]).flatMap(value => { const article = parseArticle(value); return article ? [article] : []; }).slice(0, kind === 'saved' ? 100 : 300);
+  return read(INTELLIGENCE_STORE_KEYS[kind]).flatMap(value => { const article = parseArticle(value); return article ? [article] : []; }).slice(0, kind === 'saved' ? 100 : 600);
 }
 export function saveIntelligenceArticles(kind: 'saved' | 'cache', items: IntelligenceArticle[]): boolean {
-  return write(INTELLIGENCE_STORE_KEYS[kind], serializeArticles(items.slice(0, kind === 'saved' ? 100 : 300)));
+  return write(INTELLIGENCE_STORE_KEYS[kind], serializeArticles(items.slice(0, kind === 'saved' ? 100 : 600)));
 }
 export function getIntelligenceConnectorConfigs(): IntelligenceConnectorConfig[] {
   return read(INTELLIGENCE_STORE_KEYS.connectors).flatMap(value => { const config = validateIntelligenceConnector(value); return config ? [config] : []; }).slice(0, 30);
@@ -79,7 +79,7 @@ export function getIntelligenceAlerts(): IntelligenceAlertRecord[] {
     const articles = record.articles.flatMap(value => { const state = object(value);
       return state && typeof state.publisher === 'string' && typeof state.fingerprint === 'string'
         ? [{ publisher: state.publisher.slice(0, 150), fingerprint: state.fingerprint.slice(0, 50) }] : []; }).slice(0, 100);
-    return [{ eventId: record.eventId, title: record.title.slice(0, 500), source: record.source.slice(0, 120),
+    return [{ eventId: record.eventId, title: record.title.slice(0, 500), source: record.source.slice(0, 200),
       link: record.link, severity: record.severity as IntelligenceAlertRecord['severity'], notifiedAt: record.notifiedAt, articles }];
   }).slice(0, 100);
 }
@@ -93,7 +93,7 @@ export function getIntelligenceDrafts(): IntelligenceDraft[] {
       || typeof draft.createdAt !== 'number' || typeof draft.eventUpdatedAt !== 'number') return [];
     const sources = draft.sources.flatMap(value => { const source = object(value);
       return source && typeof source.name === 'string' && typeof source.url === 'string' && canonicalPersonalNewsUrl(source.url) && typeof source.publishedAt === 'number'
-        ? [{ name: source.name.slice(0, 120), url: source.url, publishedAt: source.publishedAt }] : []; }).slice(0, 30);
+        ? [{ name: source.name.slice(0, 200), url: source.url, publishedAt: source.publishedAt }] : []; }).slice(0, 30);
     return [{ id: draft.id, eventId: draft.eventId, platform: draft.platform as IntelligenceDraft['platform'], language: draft.language as IntelligenceDraft['language'],
       title: draft.title.slice(0, 500), text: draft.text.slice(0, 5000), verification: draft.verification as IntelligenceDraft['verification'],
       sources, createdAt: draft.createdAt, eventUpdatedAt: draft.eventUpdatedAt, status: 'draft' as const }];

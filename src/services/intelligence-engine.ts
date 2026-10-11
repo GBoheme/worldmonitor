@@ -44,7 +44,7 @@ export function officialRepositoryRelease(item: IntelligenceArticle): boolean {
   const url = canonicalPersonalNewsUrl(item.link);
   if (!release || !url || !/^[\w.-]+\/[\w.-]+$/.test(release.repository)) return false;
   return new URL(url).origin === 'https://github.com'
-    && new URL(url).pathname.startsWith(`/${release.repository}/releases/`);
+    && new URL(url).pathname.toLowerCase().startsWith(`/${release.repository.toLowerCase()}/releases/`);
 }
 
 /** Count visible publisher families; identical URL/content syndication adds no independence. */

@@ -19,7 +19,14 @@ describe('Intelligence durable storage',()=>{
  });
  it('recovers from malformed data and caps cached articles',()=>{
   localStorage.setItem(INTELLIGENCE_STORE_KEYS.cache,'{bad'); expect(getIntelligenceArticles('cache')).toEqual([]);
-  saveIntelligenceArticles('cache',Array.from({length:400},(_,i)=>({...article,link:`https://example.com/${i}`})));
-  expect(getIntelligenceArticles('cache')).toHaveLength(300);
+  saveIntelligenceArticles('cache',Array.from({length:700},(_,i)=>({...article,link:`https://example.com/${i}`,isAlert:i===599})));
+  const cached=getIntelligenceArticles('cache');
+  expect(cached).toHaveLength(600);expect(cached[599]?.isAlert).toBe(true);
+ });
+ it('preserves the complete source identity for a valid long GitHub repository name',()=>{
+  const repository=`${'a'.repeat(39)}/${'b'.repeat(100)}`;
+  const source=`GitHub Comparison:${repository}`;
+  saveIntelligenceArticles('cache',[{...article,source,link:`https://github.com/${repository}/releases/tag/v2.0.0`,officialRelease:{repository,version:'v2.0.0'}}]);
+  expect(getIntelligenceArticles('cache')[0]?.source).toBe(source);
  });
 });

@@ -130,7 +130,9 @@ export class IntelligenceWorkspace {
         if (['sources', 'digest'].includes(this.section)) this.render(); else this.updateCards();
       }
       const enabledNames = new Set(this.configs.filter(config => config.enabled).map(config => intelligenceConnectorSource(config)));
-      this.articles = this.articles.filter(article => enabledNames.has(article.source)).slice(0, 300);
+      // Thirty GitHub connectors can return 600 items. Keep that entire bounded
+      // cycle so a high-impact item from a later source is not discarded.
+      this.articles = this.articles.filter(article => enabledNames.has(article.source)).slice(0, 600);
       if (!saveIntelligenceArticles('cache', this.articles)) this.notice = t('personalNews.sessionOnly');
       this.rebuild();
       const selected = selectIntelligenceAlerts(this.events, getPersonalNewsPreferences(), this.alerts);

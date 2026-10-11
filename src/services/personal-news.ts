@@ -65,7 +65,7 @@ export function parsePersonalNewsPreferences(raw: string | null): PersonalNewsPr
     if (Array.isArray(candidate.disabledAlertCategories)) defaults.disabledAlertCategories = PERSONAL_NEWS_CATEGORIES
       .filter(({ id }) => (candidate.disabledAlertCategories as unknown[]).includes(id)).map(({ id }) => id);
     if (Array.isArray(candidate.disabledAlertSources)) defaults.disabledAlertSources = candidate.disabledAlertSources
-      .filter((source): source is string => typeof source === 'string' && source.length <= 120).slice(0, 200);
+      .filter((source): source is string => typeof source === 'string' && source.length <= 200).slice(0, 200);
     if (candidate.quietHours && typeof candidate.quietHours === 'object') {
       const quiet = candidate.quietHours as Record<string, unknown>;
       defaults.quietHours.enabled = quiet.enabled === true;

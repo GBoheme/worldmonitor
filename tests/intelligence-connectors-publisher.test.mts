@@ -9,6 +9,11 @@ const config = { id:'github:test',kind:'github' as const,target:'GBoheme/worldmo
 const release = { html_url:'https://github.com/GBoheme/worldmonitor/releases/tag/v3.0.0',tag_name:'v3.0.0',name:'Stable',published_at:new Date(now-60000).toISOString(),body:'Official release notes' };
 const article: IntelligenceArticle = { title:'AI software release',source:'GitHub:GBoheme/worldmonitor',link:release.html_url,pubDate:new Date(now-60000),isAlert:false,officialRelease:{repository:config.target,version:'v3.0.0'} };
 describe('Official source connectors', () => {
+ it('accepts GitHub canonical owner casing when the configured repository uses lowercase',async()=>{
+  const connector=new IntelligenceConnector({...config,target:'gboheme/worldmonitor'},{now:()=>now,fetch:async()=>Response.json([release])});
+  const result=await connector.sync();assert.equal(result.items.length,1);
+  assert.equal(buildIntelligenceEvents(result.items,defaultPersonalNewsPreferences(),now)[0]?.verification,'primary');
+ });
  it('keeps tags separate and does not invent a publication date', async () => {
   const tagConfig={...config,githubMode:'tags' as const};
   const connector=new IntelligenceConnector(tagConfig,{now:()=>now,fetch:async url=>{
