@@ -105,7 +105,7 @@ export function filterPersonalNews(items: NewsItem[], preferences: PersonalNewsP
 }
 
 const TRACKING_PARAMS = /^(?:utm_.+|fbclid|gclid|mc_cid|mc_eid)$/i;
-function canonicalUrl(url: string): string {
+export function canonicalUrl(url: string): string {
   try {
     const parsed = new URL(url);
     if (!/^https?:$/.test(parsed.protocol)) return url.trim();
@@ -133,7 +133,7 @@ export function deduplicatePersonalNews(items: NewsItem[]): NewsItem[] {
     const publisher = item.source.trim().toLocaleLowerCase();
     const date = item.pubDate instanceof Date && Number.isFinite(item.pubDate.getTime())
       ? Math.floor(item.pubDate.getTime() / (24 * 60 * 60 * 1000)) : 'unknown';
-    const key = publisher + '|' + canonicalUrl(item.link) + '|' + normalizedTitle(item.title) + '|' + date;
+    const key = publisher + '|' + normalizedTitle(item.title) + '|' + date;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
