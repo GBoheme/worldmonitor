@@ -53,6 +53,11 @@ interface AllowEntry {
 
 const ALLOW_LIST: AllowEntry[] = [
   {
+    file: 'src/services/intelligence-store.ts',
+    line: 56,
+    reason: 'Durable cache serializes the original source Date after a finite check; pubDateMissing is preserved. No freshness/ranking decision is made here.',
+  },
+  {
     file: 'src/services/rss.ts',
     line: 390,
     reason: 'mlWorker.vectorStoreIngest stores pubDate as embedding metadata; not used as a freshness comparator.',

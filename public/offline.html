@@ -14,7 +14,10 @@
     button { margin-top: 1rem; padding: 0.5rem 1.5rem; background: #1a3a1a;
              color: #4ade80; border: 1px solid #2a5a2a; border-radius: 4px;
              cursor: pointer; }
-  </style>
+  .gi-offline { display:block; max-width:900px; margin:auto; padding:20px; }
+.gi-offline .c { text-align:start; } .gi-offline article { padding:18px; border:1px solid #303640; border-radius:12px; margin:12px 0; overflow-wrap:anywhere; }
+.gi-offline a { color:#d6b878; } .gi-offline h2 { font-size:1.1rem; }
+</style>
 </head>
 <body>
   <div class="c">
@@ -83,5 +86,34 @@
       } catch (e) { /* keep English defaults */ }
     })();
   </script>
+<script>
+(function () {
+  if (new URL(location.href).searchParams.get('intelligence') !== '1') return;
+  var ar = true;
+  try { ar = (localStorage.getItem('wm-locale-explicit') || 'ar').split('-')[0] === 'ar'; } catch (_) {}
+  document.documentElement.lang = ar ? 'ar' : 'en';
+  document.documentElement.dir = ar ? 'rtl' : 'ltr';
+  document.title = 'GBoheme Intelligence'; document.body.classList.add('gi-offline');
+  document.getElementById('t-title').textContent = ar ? 'GBoheme Intelligence · دون اتصال' : 'GBoheme Intelligence · Offline';
+  document.getElementById('t-msg').textContent = ar ? 'الأخبار المخزنة على هذا الجهاز. يلزم الاتصال لتحديث الأخبار وفتح المصادر.' : 'News stored on this device. Reconnect to refresh news and open sources.';
+  document.getElementById('t-retry').textContent = ar ? 'إعادة المحاولة' : 'Retry';
+  var list = document.createElement('section'); document.querySelector('.c').append(list);
+  var seen = new Set(); var items = [];
+  ['ghboheme-saved-news-v1', 'ghboheme-news-cache-v1'].forEach(function (key) {
+    try { var parsed = JSON.parse(localStorage.getItem(key) || '[]'); if (Array.isArray(parsed)) items = items.concat(parsed.slice(0,300)); } catch (_) {}
+  });
+  items.slice(0,400).forEach(function (item) {
+    if (!item || typeof item.title !== 'string' || typeof item.link !== 'string') return;
+    var url; try { url = new URL(item.link); } catch (_) { return; }
+    if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password || seen.has(url.href)) return;
+    seen.add(url.href); var card = document.createElement('article'); var title = document.createElement('h2'); var link = document.createElement('a');
+    link.href = url.href; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = item.title.slice(0,500); title.append(link); title.dir = 'auto'; card.append(title);
+    var extract = document.createElement('p'); extract.dir = 'auto'; extract.textContent = typeof item.snippet === 'string' ? item.snippet.slice(0,400) : ''; card.append(extract);
+    var meta = document.createElement('p'); var date = new Date(item.pubDate);
+    meta.textContent = (typeof item.source === 'string' ? item.source.slice(0,120) : '') + ' · ' + (!item.pubDateMissing && Number.isFinite(date.getTime()) && date.getTime()>0 ? date.toLocaleString(ar ? 'ar' : 'en') : ar ? 'تاريخ النشر غير معروف' : 'Publication date unknown'); card.append(meta); list.append(card);
+  });
+  if (!list.children.length) { var empty = document.createElement('p'); empty.textContent = ar ? 'لا توجد أخبار مخزنة بعد. افتح التطبيق أثناء الاتصال أولاً.' : 'No news is stored yet. Open the app online first.'; list.append(empty); }
+})();
+</script>
 </body>
 </html>

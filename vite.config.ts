@@ -1020,17 +1020,21 @@ export default defineConfig(({ mode }) => {
         includeManifestIcons: false,
 
         manifest: {
-          name: `${activeMeta.siteName} - ${activeMeta.subject}`,
-          short_name: activeMeta.shortName,
+          name: activeVariant === 'full' ? 'GBoheme Intelligence' : `${activeMeta.siteName} - ${activeMeta.subject}`,
+          short_name: activeVariant === 'full' ? 'GBoheme' : activeMeta.shortName,
           description: activeMeta.description,
-          start_url: '/dashboard',
+          start_url: activeVariant === 'full' ? '/dashboard?intelligence=1' : '/dashboard',
           scope: '/',
           display: 'standalone',
           orientation: 'any',
           theme_color: '#0a0f0a',
           background_color: '#0a0f0a',
           categories: activeMeta.categories,
-          icons: [
+          icons: activeVariant === 'full' ? [
+            { src: '/gboheme-icon-192.png', sizes: '192x192', type: 'image/png' },
+            { src: '/gboheme-icon-512.png', sizes: '512x512', type: 'image/png' },
+            { src: '/gboheme-icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          ] : [
             { src: '/favico/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' },
             { src: '/favico/android-chrome-512x512.png', sizes: '512x512', type: 'image/png' },
             { src: '/favico/android-chrome-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },

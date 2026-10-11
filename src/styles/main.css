@@ -68,7 +68,7 @@
 }
 
 [dir="rtl"] {
-  --font-body: 'Tajawal', 'Geeza Pro', 'SF Arabic', 'Tahoma', var(--font-body-base);
+  --font-body: 'Cairo', 'Geeza Pro', 'SF Arabic', 'Tahoma', var(--font-body-base);
 }
 
 :lang(zh-CN),

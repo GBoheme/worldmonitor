@@ -2,7 +2,7 @@ import { SITE_VARIANT } from '@/config/variant';
 import { safeStorageGet } from '@/utils/safe-storage';
 import { getClerkToken } from '@/services/clerk';
 import { sleepBeforeRetry, withBillingVerificationRetry } from '@/services/billing-retry';
-import { hasExplicitDesktopSignals, isDesktopRuntime } from './desktop-runtime';
+import { hasExplicitDesktopSignals, isDesktopRuntime, isGbohemeMobileRuntime } from './desktop-runtime';
 
 // The detector lives in a dependency-free leaf (#5911) so consumers that need
 // only the boolean do not pull this module's variant/Clerk graph. Re-exported
@@ -135,6 +135,7 @@ function hostnameOf(url: string): string {
  * the exact failure this guard exists to stop.
  */
 function suppressesRemoteBase(configuredBaseUrl: string): boolean {
+  if (isGbohemeMobileRuntime()) return false;
   if (typeof window === 'undefined') return false;
   if (hasExplicitDesktopSignals()) return false;
   if (!isLoopbackHostname(window.location?.hostname ?? '')) return false;
@@ -142,6 +143,7 @@ function suppressesRemoteBase(configuredBaseUrl: string): boolean {
 }
 
 export function getConfiguredWebApiBaseUrl(): string {
+  if (isGbohemeMobileRuntime()) return normalizeBaseUrl(WS_API_URL || DEFAULT_WEB_API_URL);
   if (WS_API_URL) {
     const configured = normalizeBaseUrl(WS_API_URL);
     return suppressesRemoteBase(configured) ? '' : configured;

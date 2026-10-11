@@ -102,3 +102,12 @@ describe('Local important-only alerts', () => {
     assert.equal(selectIntelligenceAlerts(many, prefs(), first, now + 60_000).length, 0);
   });
 });
+
+it('excluded alert sources cannot supply the displayed alert or trigger a material update',()=>{
+ const settings=prefs();settings.disabledAlertSources=['Reuters World'];
+ const list=buildIntelligenceEvents([article(),article('BBC World'),article('AP News',{link:'https://apnews.com/article/1'})],settings,now);
+ const first=selectIntelligenceAlerts(list,settings,[],now);assert.equal(first.length,1);assert.notEqual(first[0]?.source,'Reuters World');
+ const later=now+31*60000;
+ const updated=buildIntelligenceEvents([article('Reuters World',{pubDate:new Date(later),snippet:'A substantial new development from this excluded publisher must not generate another notification.'}),article('BBC World'),article('AP News',{link:'https://apnews.com/article/1'})],settings,later);
+ assert.equal(selectIntelligenceAlerts(updated,settings,first,later).length,0);
+});

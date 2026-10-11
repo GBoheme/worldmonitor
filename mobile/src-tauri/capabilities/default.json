@@ -1,0 +1,11 @@
+{
+  "identifier": "default",
+  "description": "Local mobile frontend only",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    { "identifier": "opener:allow-open-url", "allow": [{ "url": "https://*" }, { "url": "http://*" }] }
+  ]
+}

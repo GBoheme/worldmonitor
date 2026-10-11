@@ -1,0 +1,32 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "GBoheme Intelligence",
+  "version": "2.10.0",
+  "identifier": "app.gboheme.intelligence",
+  "build": {
+    "beforeDevCommand": "npm --prefix .. run dev:intelligence:mobile",
+    "beforeBuildCommand": "npm --prefix .. run build:intelligence:mobile -- --outDir dist-gboheme-mobile",
+    "devUrl": "http://localhost:3000",
+    "frontendDist": "../../dist-gboheme-mobile"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "GBoheme Intelligence"
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; connect-src 'self' https:; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'nonce-wm-static-bootstrap' 'wasm-unsafe-eval'; worker-src 'self' blob:; font-src 'self' data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com;"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "android": {
+      "minSdkVersion": 26
+    },
+    "icon": [
+      "icons/icon.png"
+    ]
+  }
+}

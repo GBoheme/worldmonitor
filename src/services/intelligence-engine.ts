@@ -2,6 +2,7 @@ import type { NewsItem } from '@/types';
 import { declaredSourceTier } from '../../server/_shared/source-tiers';
 import { publisherFamilyForItem } from '../../shared/publisher-families.js';
 import { effectivePubDateMs } from './feed-date';
+import { intelligenceCountryMentions } from './intelligence-geography';
 import {
   canonicalPersonalNewsUrl, classifyPersonalNewsWithConfidence, deduplicatePersonalNews,
   normalizedPersonalNewsTitle, personalNewsArticleKey,
@@ -13,6 +14,7 @@ export type VerificationState = 'primary' | 'corroborated' | 'unconfirmed';
 export interface IntelligenceArticle extends NewsItem {
   /** Set by official connectors, never inferred from an arbitrary headline. */
   officialRelease?: { repository: string; version: string };
+  releaseComparisonUrl?: string;
 }
 export interface IntelligenceEvent {
   id: string;
@@ -23,7 +25,8 @@ export interface IntelligenceEvent {
   verification: VerificationState;
   severity: IntelligenceSeverity;
   score: number;
-  reasons: Array<'impact' | 'corroboration' | 'primary' | 'recent' | 'interest' | 'reliable' | 'majorRelease'>;
+  reasons: Array<'impact' | 'corroboration' | 'primary' | 'recent' | 'interest' | 'reliable' | 'majorRelease' | 'geography'>;
+  countryMentions: string[];
   firstSeen: number;
   lastUpdated: number;
   summary: string;
@@ -101,6 +104,7 @@ export function buildIntelligenceEvents(inputs: IntelligenceArticle[], preferenc
       : articles.some(article => article.threat?.level === 'high') ? 35 : articles.some(article => article.isAlert) ? 25 : 0;
     const majorRelease = articles.some(article => officialRepositoryRelease(article) && /^v?[1-9]\d*\.0\.0(?:$|\+)/.test(article.officialRelease!.version));
     const interest = classification.categories.some(category => preferences.categories[category]);
+    const countryMentions = [...new Set(articles.flatMap(article => intelligenceCountryMentions(`${article.title} ${article.snippet ?? ''}`)))];
     const reasons: IntelligenceEvent['reasons'] = [];
     let score = 0;
     if (impact) { score += impact; reasons.push('impact'); }
@@ -109,9 +113,10 @@ export function buildIntelligenceEvents(inputs: IntelligenceArticle[], preferenc
     if (recent) { score += 15; reasons.push('recent'); }
     if (interest) { score += 10; reasons.push('interest'); }
     if (reliable || official) { score += 10; reasons.push('reliable'); }
+    if (countryMentions.length >= 2) { score += 5; reasons.push('geography'); }
     const severity: IntelligenceSeverity = impact === 45 ? 'critical' : impact === 35 || score >= 75 ? 'high' : score >= 35 ? 'medium' : 'low';
     return { id: `event-${intelligenceHash(groupKey)}`, articles, primary, classification, publisherCount, verification,
-      severity, score: Math.min(score, 100), reasons, firstSeen, lastUpdated,
+      severity, score: Math.min(score, 100), reasons, countryMentions, firstSeen, lastUpdated,
       summary: primary.snippet?.trim() || primary.title, summaryKind: 'source-extract' };
   }).sort((a, b) => b.score - a.score || b.lastUpdated - a.lastUpdated || a.id.localeCompare(b.id));
 }

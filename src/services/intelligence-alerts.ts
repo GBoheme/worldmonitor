@@ -48,12 +48,13 @@ export function selectIntelligenceAlerts(events: IntelligenceEvent[], preference
       if (independentPublisherCount(enabledArticles) < 2 || !enabledArticles.some(article => (declaredSourceTier(article.source) ?? 5) <= 2)) continue;
     } else if (!enabledArticles.some(officialRepositoryRelease)) continue;
     const previous = history.filter(record => record.eventId === event.id).sort((a, b) => b.notifiedAt - a.notifiedAt)[0];
-    const states = articleStates(event);
+    const eligibleEvent = { ...event, articles: enabledArticles };
+    const states = articleStates(eligibleEvent);
     if (previous) {
       const escalation = severityRank[event.severity] > severityRank[previous.severity];
       // A new publisher or a changed publication timestamp is not a material
       // update. Require new substantial content from an already seen publisher.
-      const materialUpdate = event.articles.some((article, index) => {
+      const materialUpdate = enabledArticles.some((article, index) => {
         const state = states[index]!;
         return effectivePubDateMs(article) > previous.notifiedAt && (article.snippet?.trim().length ?? 0) >= 40
           && previous.articles.some(old => old.publisher === state.publisher)
@@ -62,8 +63,9 @@ export function selectIntelligenceAlerts(events: IntelligenceEvent[], preference
       if (!escalation && !materialUpdate) continue;
       if (now - previous.notifiedAt < 30 * 60_000) continue;
     }
-    selected.push({ eventId: event.id, title: event.primary.title, link: event.primary.link,
-      source: event.primary.source, severity: event.severity, notifiedAt: now, articles: states });
+    const primary = enabledArticles.includes(event.primary) ? event.primary : enabledArticles[0]!;
+    selected.push({ eventId: event.id, title: primary.title, link: primary.link,
+      source: primary.source, severity: event.severity, notifiedAt: now, articles: states });
   }
   return selected;
 }
