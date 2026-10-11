@@ -24,6 +24,7 @@ import {
   type FontScaleChangedDetail,
 } from '@/services/font-scale-settings';
 import { escapeHtml } from '@/utils/sanitize';
+import { PERSONAL_NEWS_CATEGORIES, getPersonalNewsPreferences, setPersonalNewsCategory, type PersonalNewsCategoryId } from '@/services/personal-news';
 import { trackLanguageChange } from '@/services/analytics';
 import { exportSettings, importSettings, type ImportResult } from '@/utils/settings-persistence';
 import { getSyncState, getLastSyncAt, syncNow, isCloudSyncEnabled } from '@/utils/cloud-prefs-sync';
@@ -135,6 +136,11 @@ function handlePreferenceChange(
   container: HTMLElement,
   host: PreferencesHost,
 ): boolean | Promise<boolean> {
+  if (target.id.startsWith('us-personal-category-')) {
+    const id = target.id.slice('us-personal-category-'.length);
+    if (!PERSONAL_NEWS_CATEGORIES.some(category => category.id === id)) return false;
+    return setPersonalNewsCategory(id as PersonalNewsCategoryId, target.checked);
+  }
   switch (target.id) {
     case 'us-stream-quality':
       setStreamQuality(target.value as StreamQuality);
@@ -374,6 +380,18 @@ export function renderPreferences(host: PreferencesHost): PreferencesResult {
 
   html += `</div></details>`;
 
+  // ── GBoheme Intelligence personal interests (device-local) ──
+  const personalNews = getPersonalNewsPreferences();
+  html += `<details class="wm-pref-group" open>`;
+  html += `<summary>GBoheme Intelligence · الاهتمامات الإخبارية</summary>`;
+  html += `<div class="wm-pref-group-content" lang="ar" dir="rtl">`;
+  html += `<div class="ai-flow-toggle-desc">اختر موضوعات الأخبار. تُطبَّق التغييرات مباشرة على لوحات الأخبار في هذا الجهاز، وتبقى الأخبار غير المصنفة ظاهرة. إعدادات التنبيهات الخارجية مستقلة.</div>`;
+  for (const category of PERSONAL_NEWS_CATEGORIES) {
+    html += toggleRowHtml('us-personal-category-' + category.id,
+      escapeHtml(category.ar), escapeHtml(category.en), personalNews.categories[category.id]);
+  }
+  html += `<div class="ai-flow-toggle-desc" role="status">اللغات المفضلة: العربية والإنجليزية · التنبيهات: الأخبار المهمة والعاجلة فقط (هدف التصميم، وليس بديلاً عن إعدادات التنبيهات الخاصة بالحساب).</div>`;
+  html += `</div></details>`;
   // ── Analysis Frameworks group ──
   html += `<details class="wm-pref-group">`;
   html += `<summary>${t('components.insights.analysisFrameworksLabel')}</summary>`;
