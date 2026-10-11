@@ -113,6 +113,7 @@ export function deduplicatePersonalNews(items: NewsItem[]): NewsItem[] {
   const seen = new Set<string>();
   return items.filter((item) => {
     const publisher = item.source.trim().toLocaleLowerCase();
+    if (!item.title.trim()) return true; // Keep incomplete upstream records rather than merging blanks.
     const date = item.pubDate instanceof Date && Number.isFinite(item.pubDate.getTime())
       ? Math.floor(item.pubDate.getTime() / (24 * 60 * 60 * 1000)) : 'unknown';
     const key = publisher + '|' + normalizedTitle(item.title) + '|' + date;
