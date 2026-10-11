@@ -494,6 +494,36 @@ function snapshotPaths(cacheDir, repoName, prNumber, headOid = '') {
   };
 }
 
+export function assertPrivateWindowsAcl(acl) {
+  if (!acl || typeof acl.currentUser !== 'string' || typeof acl.owner !== 'string' || !Array.isArray(acl.allowSids)) {
+    throw new Error('Cannot verify PR snapshot cache Windows ACL');
+  }
+  const trusted = new Set([acl.currentUser, 'S-1-5-18', 'S-1-5-32-544']);
+  if (!trusted.has(acl.owner) || acl.allowSids.some(sid => typeof sid !== 'string' || !trusted.has(sid))) {
+    throw new Error('PR snapshot cache Windows ACL grants access outside the current user, SYSTEM and administrators');
+  }
+}
+
+function checkWindowsCacheAcl(path) {
+  // NTFS does not expose POSIX permission bits. Inspect actual allow ACEs;
+  // never interpret Node's synthetic 0666/0777 mode as a privacy guarantee.
+  const script = `$ErrorActionPreference = 'Stop';
+    $acl = Get-Acl -LiteralPath $env:WM_AGENT_CACHE_ACL_PATH;
+    $sidType = [System.Security.Principal.SecurityIdentifier];
+    $allowed = @($acl.GetAccessRules($true, $true, $sidType) | Where-Object { $_.AccessControlType -eq 'Allow' -and [int]$_.FileSystemRights -ne 0 } | ForEach-Object { $_.IdentityReference.Value });
+    @{ currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value; owner = $acl.GetOwner($sidType).Value; allowSids = $allowed } | ConvertTo-Json -Compress`;
+  // PowerShell 7's module path is incompatible with Windows PowerShell 5.
+  const aclEnv = { ...process.env, WM_AGENT_CACHE_ACL_PATH: path };
+  delete aclEnv.PSModulePath;
+  const result = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
+    encoding: 'utf8', timeout: COMMAND_TIMEOUT_MS, windowsHide: true,
+    env: aclEnv,
+  });
+  if (result.error || result.status !== 0) throw new Error(`Cannot inspect PR snapshot cache Windows ACL: ${path}`);
+  try { assertPrivateWindowsAcl(JSON.parse(result.stdout)); }
+  catch (error) { throw new Error(`${error.message}: ${path}`); }
+}
+
 function assertPrivateDirectory(path) {
   const stat = lstatSync(path);
   if (stat.isSymbolicLink() || !stat.isDirectory()) {
@@ -502,7 +532,8 @@ function assertPrivateDirectory(path) {
   if (process.getuid && stat.uid !== process.getuid()) {
     throw new Error(`PR snapshot cache directory is not owned by the current user: ${path}`);
   }
-  if ((stat.mode & 0o077) !== 0) {
+  if (process.platform === 'win32') checkWindowsCacheAcl(path);
+  else if ((stat.mode & 0o077) !== 0) {
     throw new Error(`PR snapshot cache directory permissions are too broad: ${path}`);
   }
 }
@@ -516,7 +547,7 @@ function ensurePrivateDirectory(path, cacheDir) {
     throw new Error('PR snapshot cache path escapes its root');
   }
   let current = root;
-  for (const segment of suffix.split('/').filter(Boolean)) {
+  for (const segment of suffix.split(/[\\/]/).filter(Boolean)) {
     current = join(current, segment);
     try {
       mkdirSync(current, { mode: 0o700 });
@@ -535,7 +566,8 @@ function assertPrivateFile(path) {
   if (process.getuid && stat.uid !== process.getuid()) {
     throw new Error(`PR snapshot cache file is not owned by the current user: ${path}`);
   }
-  if ((stat.mode & 0o077) !== 0) {
+  if (process.platform === 'win32') checkWindowsCacheAcl(path);
+  else if ((stat.mode & 0o077) !== 0) {
     throw new Error(`PR snapshot cache file permissions are too broad: ${path}`);
   }
 }

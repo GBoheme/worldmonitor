@@ -22,7 +22,30 @@ import {
   parsePrNumber,
   readCachedSnapshot,
 } from '../scripts/agent-pr-snapshot.mjs';
-import { createTempDir } from './helpers/temp-dir.mjs';
+import { createTempDir as createGeneralTempDir } from './helpers/temp-dir.mjs';
+import { spawnSync } from 'node:child_process';
+
+function createTempDir(prefix) {
+  const path = createGeneralTempDir(prefix);
+  if (process.platform !== 'win32') return path;
+  // Fresh test directory only: Windows ignores mkdir's POSIX mode argument.
+  const env = { ...process.env, WM_TEST_CACHE_PATH: path };
+  delete env.PSModulePath;
+  const result = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', `
+    $ErrorActionPreference = 'Stop';
+    $user = [System.Security.Principal.WindowsIdentity]::GetCurrent().User;
+    $acl = New-Object System.Security.AccessControl.DirectorySecurity;
+    $acl.SetAccessRuleProtection($true, $false); $acl.SetOwner($user);
+    foreach ($sid in @($user.Value, 'S-1-5-18', 'S-1-5-32-544')) {
+      $identity = New-Object System.Security.Principal.SecurityIdentifier($sid);
+      $rule = New-Object System.Security.AccessControl.FileSystemAccessRule($identity, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow');
+      $acl.AddAccessRule($rule);
+    }
+    Set-Acl -LiteralPath $env:WM_TEST_CACHE_PATH -AclObject $acl;
+  `], { env, encoding: 'utf8', windowsHide: true, timeout: 30_000 });
+  assert.equal(result.status, 0, result.stderr);
+  return path;
+}
 
 const oid = character => character.repeat(40);
 
@@ -454,7 +477,7 @@ describe('agent PR snapshot', () => {
     const target = join(parent, 'target');
     const cacheDir = join(parent, 'cache');
     mkdirSync(target, { mode: 0o700 });
-    symlinkSync(target, cacheDir, 'dir');
+    symlinkSync(target, cacheDir, process.platform === 'win32' ? 'junction' : 'dir');
     assert.throws(
       () => readCachedSnapshot({ cacheDir, prNumber: 123, repoName: 'koala73/worldmonitor' }),
       /Unsafe PR snapshot cache directory/,
