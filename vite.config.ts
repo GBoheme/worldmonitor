@@ -918,6 +918,7 @@ export default defineConfig(({ mode }) => {
 
   const isE2E = process.env.VITE_E2E === '1';
   const isDesktopBuild = process.env.VITE_DESKTOP_RUNTIME === '1';
+  const isMobileBuild = process.env.VITE_GBOHEME_MOBILE === '1';
   const activeVariant = process.env.VITE_VARIANT || 'full';
   const activeMeta = VARIANT_META[activeVariant] || VARIANT_META.full;
   const emitPublicSourceMaps = process.env.WM_EMIT_SOURCEMAPS === '1'
@@ -992,11 +993,11 @@ export default defineConfig(({ mode }) => {
       htmlVariantPlugin(activeMeta, activeVariant, isDesktopBuild),
       firstPartyChunkManifestPlugin(),
       chunkSizeWarningPolicyPlugin(),
-      !isDesktopBuild && dashboardHtmlOutputPlugin(),
+      !isDesktopBuild && !isMobileBuild && dashboardHtmlOutputPlugin(),
       // Variant subdomain SEO pages only make sense on the web deployment,
       // which is always the 'full' build (variant selection is runtime by
       // hostname). Desktop and dedicated VITE_VARIANT builds skip it.
-      !isDesktopBuild && activeVariant === 'full' && variantDashboardHtmlPlugin(),
+      !isDesktopBuild && !isMobileBuild && activeVariant === 'full' && variantDashboardHtmlPlugin(),
       webMcpDevSecurityHeadersPlugin(),
       polymarketPlugin(),
       rssProxyPlugin(),
