@@ -97,6 +97,8 @@ export function classifyPersonalNews(item: Pick<NewsItem, 'title' | 'snippet'>):
 export function filterPersonalNews(items: NewsItem[], preferences: PersonalNewsPreferences): NewsItem[] {
   if (PERSONAL_NEWS_CATEGORIES.every(({ id }) => preferences.categories[id])) return items;
   return items.filter((item) => {
+    // Critical/high threat news must remain visible regardless of topic toggles.
+    if (item.isAlert || item.threat?.level === 'critical' || item.threat?.level === 'high') return true;
     const categories = classifyPersonalNews(item);
     return categories.length === 0 || categories.some(id => preferences.categories[id]);
   });
