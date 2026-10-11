@@ -104,24 +104,6 @@ export function filterPersonalNews(items: NewsItem[], preferences: PersonalNewsP
   });
 }
 
-const TRACKING_PARAMS = /^(?:utm_.+|fbclid|gclid|mc_cid|mc_eid)$/i;
-export function canonicalUrl(url: string): string {
-  try {
-    const parsed = new URL(url);
-    if (!/^https?:$/.test(parsed.protocol)) return url.trim();
-    parsed.hash = '';
-    parsed.hostname = parsed.hostname.toLowerCase();
-    for (const name of [...parsed.searchParams.keys()]) {
-      if (TRACKING_PARAMS.test(name)) parsed.searchParams.delete(name);
-    }
-    parsed.searchParams.sort();
-    parsed.pathname = parsed.pathname.replace(/\/+$/, '') || '/';
-    return parsed.toString();
-  } catch {
-    return url.trim();
-  }
-}
-
 function normalizedTitle(title: string): string {
   return title.normalize('NFKC').toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 }
