@@ -60,5 +60,6 @@ describe('GBoheme personal news preferences', () => {
       item('Major discovery', 'BBC', 'https://example.com/a?utm_source=y'),
     ];
     assert.equal(deduplicatePersonalNews(news).length, 2);
+    assert.equal(deduplicatePersonalNews([...news, item('Major discovery', 'Reuters', 'https://mirror.example.net/syndicated')]).length, 2);
   });
 });
