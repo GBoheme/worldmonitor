@@ -27,7 +27,11 @@ export type PersonalNewsCategoryId = (typeof PERSONAL_NEWS_CATEGORIES)[number]['
 export interface PersonalNewsPreferences {
   categories: Record<PersonalNewsCategoryId, boolean>;
   languages: ['ar', 'en'];
-  notificationPolicy: 'important_only';
+  notificationPolicy: 'important_only' | 'off';
+  localNotifications: boolean;
+  disabledAlertCategories: PersonalNewsCategoryId[];
+  disabledAlertSources: string[];
+  quietHours: { enabled: boolean; start: number; end: number };
 }
 
 export function defaultPersonalNewsPreferences(): PersonalNewsPreferences {
@@ -35,6 +39,10 @@ export function defaultPersonalNewsPreferences(): PersonalNewsPreferences {
     categories: Object.fromEntries(PERSONAL_NEWS_CATEGORIES.map(({ id }) => [id, true])) as Record<PersonalNewsCategoryId, boolean>,
     languages: ['ar', 'en'],
     notificationPolicy: 'important_only',
+    localNotifications: false,
+    disabledAlertCategories: [],
+    disabledAlertSources: [],
+    quietHours: { enabled: false, start: 22, end: 7 },
   };
 }
 
@@ -51,6 +59,19 @@ export function parsePersonalNewsPreferences(raw: string | null): PersonalNewsPr
       ? candidate.categories as Record<string, unknown> : {};
     for (const { id } of PERSONAL_NEWS_CATEGORIES) {
       if (typeof values[id] === 'boolean') defaults.categories[id] = values[id];
+    }
+    if (candidate.notificationPolicy === 'off') defaults.notificationPolicy = 'off';
+    defaults.localNotifications = candidate.localNotifications === true;
+    if (Array.isArray(candidate.disabledAlertCategories)) defaults.disabledAlertCategories = PERSONAL_NEWS_CATEGORIES
+      .filter(({ id }) => (candidate.disabledAlertCategories as unknown[]).includes(id)).map(({ id }) => id);
+    if (Array.isArray(candidate.disabledAlertSources)) defaults.disabledAlertSources = candidate.disabledAlertSources
+      .filter((source): source is string => typeof source === 'string' && source.length <= 120).slice(0, 200);
+    if (candidate.quietHours && typeof candidate.quietHours === 'object') {
+      const quiet = candidate.quietHours as Record<string, unknown>;
+      defaults.quietHours.enabled = quiet.enabled === true;
+      for (const key of ['start', 'end'] as const) {
+        if (Number.isInteger(quiet[key]) && Number(quiet[key]) >= 0 && Number(quiet[key]) <= 23) defaults.quietHours[key] = Number(quiet[key]);
+      }
     }
   } catch {
     // Fall back to all enabled.
@@ -112,12 +133,32 @@ export function classifyPersonalNews(item: Pick<NewsItem, 'title' | 'snippet'>):
   return PERSONAL_NEWS_CATEGORIES.flatMap(({ id }) => KEYWORDS[id].test(content) ? [id] : []);
 }
 
+export interface PersonalNewsClassification {
+  categories: PersonalNewsCategoryId[];
+  confidence: number;
+  method: 'rules' | 'upstream-model' | 'unclassified';
+}
+
+/** Reuse upstream ML/LLM threat evidence as a second classification layer. */
+export function classifyPersonalNewsWithConfidence(item: Pick<NewsItem, 'title' | 'snippet' | 'threat'>): PersonalNewsClassification {
+  const categories = classifyPersonalNews(item);
+  const upstream: Partial<Record<NonNullable<NewsItem['threat']>['category'], PersonalNewsCategoryId>> = {
+    cyber: 'cybersecurity', economic: 'economy_markets', diplomatic: 'world_politics',
+    military: 'world_politics', conflict: 'world_politics', tech: 'software_platforms',
+  };
+  const modeled = item.threat && item.threat.source !== 'keyword' && item.threat.confidence >= 0.7
+    ? upstream[item.threat.category] : undefined;
+  if (modeled && !categories.includes(modeled)) categories.push(modeled);
+  return { categories, confidence: modeled ? Math.min(1, item.threat!.confidence) : categories.length ? 0.65 : 0,
+    method: modeled ? 'upstream-model' : categories.length ? 'rules' : 'unclassified' };
+}
+
 export function filterPersonalNews(items: NewsItem[], preferences: PersonalNewsPreferences): NewsItem[] {
   if (PERSONAL_NEWS_CATEGORIES.every(({ id }) => preferences.categories[id])) return items;
   return items.filter((item) => {
     // Critical/high threat news must remain visible regardless of topic toggles.
     if (item.isAlert || item.threat?.level === 'critical' || item.threat?.level === 'high') return true;
-    const categories = classifyPersonalNews(item);
+    const categories = classifyPersonalNewsWithConfidence(item).categories;
     return categories.length === 0 || categories.some(id => preferences.categories[id]);
   });
 }
