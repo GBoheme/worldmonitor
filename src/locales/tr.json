@@ -3808,5 +3808,25 @@
       "description": "İran, İsrail, Körfez ve Kürt bölgelerine ilişkin kaynakları etkinleştirir"
     },
     "unavailable": "{{preset}} ön ayarı mevcut panellerinizle kullanılamıyor"
+  },
+  "personalNews": {
+    "filteredEmpty": "No news matches your selected interests",
+    "interests": "GBoheme Intelligence · News interests",
+    "interestsDesc": "Topics apply immediately. Unclassified and important news remain visible. Preferences join existing account sync when enabled.",
+    "preferencesNote": "Arabic and English · Local important-news alerts are separate from account notifications.",
+    "saved": "Preferences saved",
+    "sessionOnly": "Storage unavailable. Changes apply for this session only.",
+    "categories": {
+      "ai_agents": "AI & Agents",
+      "open_source_github": "Open Source & GitHub",
+      "software_platforms": "Windows, Android & Software",
+      "world_politics": "World News & Politics",
+      "cybersecurity": "Cybersecurity",
+      "economy_markets": "Economy & Markets",
+      "energy_oil": "Energy & Oil",
+      "science_discovery": "Science & Discoveries",
+      "iraq_local": "Iraq Local News",
+      "sports_entertainment": "Sports & Entertainment"
+    }
   }
 }

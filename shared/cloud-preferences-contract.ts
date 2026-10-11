@@ -12,6 +12,7 @@ export const ACCOUNT_PROVENANCE_PREFERENCE_KEYS = [
 ] as const;
 
 export const ROLLING_DEPLOYMENT_PREFERENCE_KEYS = [
+  'ghboheme-personal-news-v1',
   ...ACCOUNT_PROVENANCE_PREFERENCE_KEYS,
   'wm-font-scale',
   'wm-live-media-idle-stop',

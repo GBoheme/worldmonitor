@@ -99,7 +99,7 @@ describe('cloud blob absent-key tolerance', () => {
     // representation, so preserving omission cannot resurrect cleared state.
     assert.deepEqual(
       [...ABSENCE_TOLERANT_SYNC_KEYS].sort(),
-      [FONT_SCALE, LAYER_OWNERSHIP, LIVE_MEDIA_IDLE_STOP, SOURCE_OWNERSHIP].sort(),
+      [FONT_SCALE, LAYER_OWNERSHIP, LIVE_MEDIA_IDLE_STOP, SOURCE_OWNERSHIP, 'ghboheme-personal-news-v1'].sort(),
     );
     for (const key of ABSENCE_TOLERANT_SYNC_KEYS) {
       assert.ok(
@@ -123,7 +123,7 @@ describe('cloud blob absent-key tolerance', () => {
     );
     assert.deepEqual(
       notDeletable.sort(),
-      [FONT_SCALE, LAYER_OWNERSHIP, LIVE_MEDIA_IDLE_STOP, SOURCE_OWNERSHIP].sort(),
+      [FONT_SCALE, LAYER_OWNERSHIP, LIVE_MEDIA_IDLE_STOP, SOURCE_OWNERSHIP, 'ghboheme-personal-news-v1'].sort(),
     );
   });
 });

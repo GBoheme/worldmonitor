@@ -3,7 +3,8 @@
  * Account sync and server-side notification filters are separate future work.
  */
 import type { NewsItem } from '@/types';
-import { safeStorageGet, safeStorageSetChecked } from '@/utils/safe-storage';
+import { safeStorageGetChecked, safeStorageSetChecked } from '@/utils/safe-storage';
+import { effectivePubDateMs } from './feed-date';
 
 export const PERSONAL_NEWS_STORAGE_KEY = 'ghboheme-personal-news-v1';
 export const PERSONAL_NEWS_CHANGED_EVENT = 'ghboheme-personal-news-changed';
@@ -31,8 +32,7 @@ export interface PersonalNewsPreferences {
 
 export function defaultPersonalNewsPreferences(): PersonalNewsPreferences {
   return {
-    categories: Object.fromEntries(PERSONAL_NEWS_CATEGORIES.map(({ id }) => [id, true]))
-      as Record<PersonalNewsCategoryId, boolean>,
+    categories: Object.fromEntries(PERSONAL_NEWS_CATEGORIES.map(({ id }) => [id, true])) as Record<PersonalNewsCategoryId, boolean>,
     languages: ['ar', 'en'],
     notificationPolicy: 'important_only',
   };
@@ -59,7 +59,29 @@ export function parsePersonalNewsPreferences(raw: string | null): PersonalNewsPr
 }
 
 export function getPersonalNewsPreferences(): PersonalNewsPreferences {
-  return parsePersonalNewsPreferences(safeStorageGet(PERSONAL_NEWS_STORAGE_KEY));
+  const read = safeStorageGetChecked(PERSONAL_NEWS_STORAGE_KEY);
+  if (sessionPreferences && (!read.ok || read.value === sessionPreferences.base)) {
+    return parsePersonalNewsPreferences(sessionPreferences.value);
+  }
+  sessionPreferences = null;
+  return parsePersonalNewsPreferences(read.value);
+}
+
+// Keep edits usable for this session when storage is blocked or full. A later
+// external write supersedes the fallback, so account sync cannot be shadowed.
+let sessionPreferences: { base: string | null; value: string } | null = null;
+
+export function savePersonalNewsPreferences(preferences: PersonalNewsPreferences): boolean {
+  const value = JSON.stringify(parsePersonalNewsPreferences(JSON.stringify(preferences)));
+  const before = safeStorageGetChecked(PERSONAL_NEWS_STORAGE_KEY);
+  const written = safeStorageSetChecked(PERSONAL_NEWS_STORAGE_KEY, value);
+  const after = safeStorageGetChecked(PERSONAL_NEWS_STORAGE_KEY);
+  const persisted = written && after.ok && after.value === value;
+  sessionPreferences = persisted ? null : { base: before.value, value };
+  if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(PERSONAL_NEWS_CHANGED_EVENT));
+  }
+  return persisted;
 }
 
 export function setPersonalNewsCategory(id: PersonalNewsCategoryId, enabled: boolean): boolean {
@@ -67,11 +89,7 @@ export function setPersonalNewsCategory(id: PersonalNewsCategoryId, enabled: boo
   const next = getPersonalNewsPreferences();
   if (next.categories[id] === enabled) return true;
   next.categories[id] = enabled;
-  if (!safeStorageSetChecked(PERSONAL_NEWS_STORAGE_KEY, JSON.stringify(next))) return false;
-  if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') {
-    window.dispatchEvent(new CustomEvent(PERSONAL_NEWS_CHANGED_EVENT));
-  }
-  return true;
+  return savePersonalNewsPreferences(next);
 }
 
 // Conservative keyword labels, not a substitute for a verified ML classifier.
@@ -104,21 +122,50 @@ export function filterPersonalNews(items: NewsItem[], preferences: PersonalNewsP
   });
 }
 
-function normalizedTitle(title: string): string {
+export function normalizedPersonalNewsTitle(title: string): string {
   return title.normalize('NFKC').toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 }
 
-/** Dedup identical articles from the SAME publisher only; keep cross-publisher evidence. */
+/** Remove tracking only. Semantic query parameters remain part of identity. */
+export function canonicalPersonalNewsUrl(link: string): string | null {
+  try {
+    const url = new URL(link);
+    if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) return null;
+    url.hash = '';
+    for (const key of [...url.searchParams.keys()]) {
+      if (/^(?:utm_.+|fbclid|gclid|mc_cid|mc_eid)$/i.test(key)) url.searchParams.delete(key);
+    }
+    url.searchParams.sort();
+    return url.href;
+  } catch { return null; }
+}
+
+/** Article identity differs from event identity; incomplete records never merge. */
+export function personalNewsArticleKey(item: NewsItem): string | null {
+  const url = canonicalPersonalNewsUrl(item.link);
+  const timestamp = effectivePubDateMs(item);
+  const title = normalizedPersonalNewsTitle(item.title);
+  const publisher = item.source.trim().toLowerCase();
+  if (!url || !timestamp || !title || !publisher) return null;
+  return JSON.stringify([publisher, url, timestamp, title, (item.snippet ?? '').normalize('NFKC').trim()]);
+}
+
+/** Dedup exact copies only, retaining publication updates and other publishers. */
 export function deduplicatePersonalNews(items: NewsItem[]): NewsItem[] {
-  const seen = new Set<string>();
-  return items.filter((item) => {
-    const publisher = item.source.trim().toLocaleLowerCase();
-    if (!item.title.trim()) return true; // Keep incomplete upstream records rather than merging blanks.
-    const date = item.pubDate instanceof Date && Number.isFinite(item.pubDate.getTime())
-      ? Math.floor(item.pubDate.getTime() / (24 * 60 * 60 * 1000)) : 'unknown';
-    const key = publisher + '|' + normalizedTitle(item.title) + '|' + date;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  const seen = new Map<string, number>();
+  const result: NewsItem[] = [];
+  for (const item of items) {
+    const key = personalNewsArticleKey(item);
+    const index = key === null ? undefined : seen.get(key);
+    if (index !== undefined) {
+      const previous = result[index]!;
+      const priority = { critical: 4, high: 3, medium: 2, low: 1, info: 0 };
+      result[index] = { ...previous, isAlert: previous.isAlert || item.isAlert,
+        threat: (priority[item.threat?.level ?? 'info'] > priority[previous.threat?.level ?? 'info']) ? item.threat : previous.threat };
+    } else {
+      if (key !== null) seen.set(key, result.length);
+      result.push(item);
+    }
+  }
+  return result;
 }

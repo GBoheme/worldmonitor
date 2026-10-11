@@ -16,6 +16,7 @@ import {
   currentOriginMain,
   findWorktreeCollisions,
   inventoryGenerationSkipReason,
+  npmInvocation,
   parseArgs,
   prepareInventoryFacts,
   prAlignment,
@@ -28,6 +29,14 @@ import { createTempDir } from './helpers/temp-dir.mjs';
 const makeRoot = () => createTempDir('wm-agent-preflight-');
 const currentMajor = process.versions.node.split('.')[0];
 const headOid = 'a'.repeat(40);
+
+describe('Windows npm execution', () => {
+  it('uses Node and an argv prefix rather than evaluating npm.cmd in a shell', () => {
+    assert.deepEqual(npmInvocation('win32', 'C:/node/npm-cli.js', 'C:/node/node.exe'),
+      { file: 'C:/node/node.exe', prefix: ['C:/node/npm-cli.js'] });
+    assert.deepEqual(npmInvocation('linux', undefined, '/usr/bin/node'), { file: 'npm', prefix: [] });
+  });
+});
 
 function readyChecks() {
   return {

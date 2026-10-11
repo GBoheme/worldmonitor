@@ -383,14 +383,14 @@ export function renderPreferences(host: PreferencesHost): PreferencesResult {
   // ── GBoheme Intelligence personal interests (device-local) ──
   const personalNews = getPersonalNewsPreferences();
   html += `<details class="wm-pref-group" open>`;
-  html += `<summary>GBoheme Intelligence · الاهتمامات الإخبارية</summary>`;
-  html += `<div class="wm-pref-group-content" lang="ar" dir="rtl">`;
-  html += `<div class="ai-flow-toggle-desc">اختر موضوعات الأخبار. تُطبَّق التغييرات مباشرة على لوحات الأخبار في هذا الجهاز، وتبقى الأخبار غير المصنفة ظاهرة. إعدادات التنبيهات الخارجية مستقلة.</div>`;
+  html += `<summary>${escapeHtml(t('personalNews.interests'))}</summary>`;
+  html += `<div class="wm-pref-group-content">`;
+  html += `<div class="ai-flow-toggle-desc">${escapeHtml(t('personalNews.interestsDesc'))}</div>`;
   for (const category of PERSONAL_NEWS_CATEGORIES) {
     html += toggleRowHtml('us-personal-category-' + category.id,
-      escapeHtml(category.ar), escapeHtml(category.en), personalNews.categories[category.id]);
+      escapeHtml(t('personalNews.categories.' + category.id)), '', personalNews.categories[category.id]);
   }
-  html += `<div class="ai-flow-toggle-desc" role="status">اللغات المفضلة: العربية والإنجليزية · التنبيهات: الأخبار المهمة والعاجلة فقط (هدف التصميم، وليس بديلاً عن إعدادات التنبيهات الخاصة بالحساب).</div>`;
+  html += `<div class="ai-flow-toggle-desc" role="status" id="personalNewsSaveStatus">${escapeHtml(t('personalNews.preferencesNote'))}</div>`;
   html += `</div></details>`;
   // ── Analysis Frameworks group ──
   html += `<details class="wm-pref-group">`;
@@ -590,6 +590,10 @@ export function renderPreferences(host: PreferencesHost): PreferencesResult {
 
         const saveResult = handlePreferenceChange(target, container, host);
         if (typeof saveResult === 'boolean') {
+          if (target.id.startsWith('us-personal-category-')) {
+            const status = container.querySelector('#personalNewsSaveStatus');
+            if (status) status.textContent = t(saveResult ? 'personalNews.saved' : 'personalNews.sessionOnly');
+          }
           if (saveResult) host.onSettingSaved?.();
           return;
         }

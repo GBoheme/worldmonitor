@@ -60,6 +60,33 @@ describe('GBoheme personal news preferences', () => {
       item('Major discovery', 'BBC', 'https://example.com/a?utm_source=y'),
     ];
     assert.equal(deduplicatePersonalNews(news).length, 2);
-    assert.equal(deduplicatePersonalNews([...news, item('Major discovery', 'Reuters', 'https://mirror.example.net/syndicated')]).length, 2);
+    assert.equal(deduplicatePersonalNews([...news, item('Major discovery', 'Reuters', 'https://mirror.example.net/syndicated')]).length, 3);
+  });
+
+  it('retains same-headline updates with different URLs, publication times or content', () => {
+    const original = item('Iraq oil update');
+    const updates = [original, { ...original, link: 'https://example.com/b' },
+      { ...original, pubDate: new Date(date.getTime() + 60_000) },
+      { ...original, snippet: 'Production has now resumed' }];
+    assert.equal(deduplicatePersonalNews(updates).length, 4);
+  });
+
+  it('keeps incomplete identities and meaningful query parameters', () => {
+    const original = item('Oil update');
+    for (const malformed of [{ ...original, pubDate: new Date('invalid') },
+      { ...original, pubDateMissing: true }, { ...original, title: '!!!' },
+      { ...original, source: '' }, { ...original, link: 'javascript:alert(1)' }]) {
+      assert.equal(deduplicatePersonalNews([malformed, malformed]).length, 2);
+    }
+    assert.equal(deduplicatePersonalNews([{ ...original, link: 'https://example.com/?id=1' },
+      { ...original, link: 'https://example.com/?id=2' }]).length, 2);
+  });
+
+  it('retains breaking status carried by a duplicate copy', () => {
+    const original = item('OPEC oil');
+    const prefs = defaultPersonalNewsPreferences();
+    prefs.categories.energy_oil = false;
+    const deduped = deduplicatePersonalNews([original, { ...original, isAlert: true }]);
+    assert.equal(filterPersonalNews(deduped, prefs).length, 1);
   });
 });
