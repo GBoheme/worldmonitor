@@ -1,4 +1,5 @@
 import { Panel } from './Panel';
+import { deduplicatePersonalNews, filterPersonalNews, getPersonalNewsPreferences, PERSONAL_NEWS_CHANGED_EVENT } from '@/services/personal-news';
 import { WindowedList } from './VirtualList';
 import type { NewsItem, ClusteredEvent, DeviationLevel, RelatedAsset, RelatedAssetContext } from '@/types';
 import { THREAT_PRIORITY } from '@/services/threat-classifier';
@@ -48,6 +49,8 @@ export interface NewsPanelServices {
 export class NewsPanel extends Panel {
   private readonly newsServices: NewsPanelServices;
   private clusteredMode = true;
+  private unfilteredNews: NewsItem[] = [];
+  private readonly onPersonalNewsChanged = () => this.renderNews(this.unfilteredNews);
   private deviationEl: HTMLElement | null = null;
   private relatedAssetContext = new Map<string, RelatedAssetContext>();
   private onRelatedAssetClick?: (asset: RelatedAsset) => void;
@@ -107,6 +110,7 @@ export class NewsPanel extends Panel {
     services: Partial<NewsPanelServices> = {},
   ) {
     super({ id, title, showCount: true, trackActivity: true, infoTooltip });
+    window.addEventListener(PERSONAL_NEWS_CHANGED_EVENT, this.onPersonalNewsChanged);
     this.newsServices = {
       clusterNews: items => analysisWorker.clusterNews(items),
       generateSummary,
@@ -489,6 +493,12 @@ export class NewsPanel extends Panel {
   }
 
   public renderNews(items: NewsItem[]): void {
+    this.unfilteredNews = items;
+    const visibleItems = filterPersonalNews(deduplicatePersonalNews(items), getPersonalNewsPreferences());
+    if (visibleItems.length === 0 && items.length > 0) {
+      this.renderFilteredEmpty('لا توجد أخبار تطابق الاهتمامات المحددة · No news matches your selected interests');
+      return;
+    }
     if (items.length === 0) {
       this.renderRequestId += 1; // Cancel in-flight clustering from previous renders.
       this.renderedBadgeState = 'unavailable';
@@ -501,10 +511,10 @@ export class NewsPanel extends Panel {
 
     // Always show flat items immediately for instant visual feedback,
     // then upgrade to clustered view in the background when ready.
-    this.renderFlat(items);
+    this.renderFlat(visibleItems);
 
     if (this.clusteredMode) {
-      void this.renderClustersAsync(items);
+      void this.renderClustersAsync(visibleItems);
     }
   }
 
@@ -961,6 +971,7 @@ export class NewsPanel extends Panel {
    * Clean up resources
    */
   public destroy(): void {
+    window.removeEventListener(PERSONAL_NEWS_CHANGED_EVENT, this.onPersonalNewsChanged);
     // Clean up windowed list
     this.windowedList?.destroy();
     this.windowedList = null;
