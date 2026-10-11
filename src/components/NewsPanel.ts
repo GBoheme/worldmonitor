@@ -494,6 +494,7 @@ export class NewsPanel extends Panel {
 
   public renderNews(items: NewsItem[]): void {
     this.unfilteredNews = items;
+    this.renderRequestId += 1; // Invalidate any clustering task from the previous preference state.
     const visibleItems = filterPersonalNews(deduplicatePersonalNews(items), getPersonalNewsPreferences());
     if (visibleItems.length === 0 && items.length > 0) {
       this.renderFilteredEmpty('لا توجد أخبار تطابق الاهتمامات المحددة · No news matches your selected interests');
