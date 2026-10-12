@@ -117,6 +117,7 @@ const GLOBAL_CSP_EXTERNAL_SCRIPT_HTML_FILES = [
   'public/pro/welcome.html',
 ];
 const STATIC_SCRIPT_NONCE = 'wm-static-bootstrap';
+const BASH_BINARY = process.env.WM_BASH_BIN || '/bin/bash';
 const WEBMCP_PLAYWRIGHT_ENV_KEYS = [
   'WM_REQUIRE_WEBMCP',
   'WM_WEBMCP_PRODUCTION',
@@ -704,7 +705,7 @@ describe('crawlable content corpus deployment contracts', () => {
         git('add', path);
         git('commit', '-qm', path);
         assert.throws(
-          () => execFileSync('/bin/bash', [resolve(__dirname, '../scripts/vercel-ignore.sh')], {
+          () => execFileSync(BASH_BINARY, [resolve(__dirname, '../scripts/vercel-ignore.sh')], {
             cwd: fixture,
             env: { ...fixtureEnv, VERCEL_GIT_COMMIT_REF: 'main', VERCEL_GIT_PREVIOUS_SHA: previous },
           }),
@@ -713,7 +714,7 @@ describe('crawlable content corpus deployment contracts', () => {
         );
         git('update-ref', 'refs/remotes/origin/main', previous);
         assert.throws(
-          () => execFileSync('/bin/bash', [resolve(__dirname, '../scripts/vercel-ignore.sh')], {
+          () => execFileSync(BASH_BINARY, [resolve(__dirname, '../scripts/vercel-ignore.sh')], {
             cwd: fixture,
             env: { ...fixtureEnv, VERCEL_GIT_COMMIT_REF: 'feature/source-catalog' },
           }),
@@ -756,7 +757,7 @@ describe('crawlable content corpus deployment contracts', () => {
         git('commit', '-qm', paths.join(', '));
         git('update-ref', 'refs/remotes/origin/main', previous);
         for (const ref of ['main', 'feature/prediction-policy']) {
-          const result = spawnSync('/bin/bash', [resolve(__dirname, '../scripts/vercel-ignore.sh')], {
+          const result = spawnSync(BASH_BINARY, [resolve(__dirname, '../scripts/vercel-ignore.sh')], {
             cwd: fixture,
             env: { ...fixtureEnv, VERCEL_GIT_COMMIT_REF: ref, VERCEL_GIT_PREVIOUS_SHA: previous },
             encoding: 'utf8',
@@ -1647,7 +1648,7 @@ describe('welcome landing page routing', () => {
   });
 
   it('starts installed PWAs on /dashboard, not the public welcome page', () => {
-    assert.match(viteConfigSource, /start_url:\s*'\/dashboard'/);
+    assert.match(viteConfigSource, /start_url:\s*activeVariant === 'full' \? '\/dashboard\?intelligence=1' : '\/dashboard'/);
   });
 
   it('sitemap lists dashboard routes and does not list legacy /welcome', () => {

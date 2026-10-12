@@ -1045,6 +1045,12 @@ export default defineConfig(({ mode }) => {
         workbox: {
           globPatterns: ['**/*.{js,css,ico,png,svg,woff2}'],
           globIgnores: [
+            // Heavy map, panel, media and secondary-screen chunks stay on demand.
+            // Offline navigation uses the self-contained offline.html snapshot.
+            '**/GlobeMap-*.js',
+            '**/App-*.js',
+            '**/hls-*.js',
+            ...LAZY_HTML_PRELOAD_CHUNKS.map(name => '**/' + name + '-*.js'),
             '**/ml*.js',
             '**/onnx*.wasm',
             '**/locale-*.js',
@@ -1084,6 +1090,16 @@ export default defineConfig(({ mode }) => {
           // are purged with the old precache, so an offline reload after any
           // deploy used to 404 the bundle and blank the dashboard.
           runtimeCaching: [
+            {
+              urlPattern: ({ url, sameOrigin }: { url: URL; sameOrigin: boolean }) =>
+                sameOrigin && /^\/assets\/[^/]+-[A-Za-z0-9_-]+\.(?:js|css|woff2)$/.test(url.pathname),
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'app-assets-on-demand',
+                expiration: { maxEntries: 160, maxAgeSeconds: 30 * 24 * 60 * 60 },
+                cacheableResponse: { statuses: [200] },
+              },
+            },
             {
               urlPattern: ({ url, sameOrigin }: { url: URL; sameOrigin: boolean }) =>
                 sameOrigin && /^\/api\//.test(url.pathname),

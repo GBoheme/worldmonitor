@@ -11,6 +11,9 @@
       "status": "excluded",
       "references": [
         {
+          "path": "scripts/benchmark-gboheme.mjs"
+        },
+        {
           "path": "scripts/measure-trade-animation-rebuild.mjs"
         },
         {
