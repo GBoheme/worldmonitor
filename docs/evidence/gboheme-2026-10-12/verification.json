@@ -1,0 +1,43 @@
+{
+  "date": "2026-10-12",
+  "sourceHead": "883864f22ab4c1f784081bb910133c3b3fcd9703",
+  "webBuild": "passed",
+  "mobileFrontendBuild": "passed: separate dist-gboheme-mobile/index.html",
+  "windowsBuild": "passed: x64 NSIS EXE and MSI; execution and signing unverified",
+  "androidApk": "blocked: Java JDK, SDK/platform-tools, NDK absent",
+  "intelligenceUnit": {
+    "pass": 39,
+    "fail": 0
+  },
+  "selectedDom": {
+    "files": 10,
+    "pass": 39,
+    "fail": 0
+  },
+  "selectedData": {
+    "total": 327,
+    "pass": 321,
+    "skip": 6,
+    "fail": 0
+  },
+  "browser": {
+    "workspace": 5,
+    "svgBudgetsAndDestroy": 3,
+    "optionalGlobeTransition": 1,
+    "realServiceWorkerCsp": 1
+  },
+  "checks": {
+    "typecheck": "passed",
+    "boundaries": "passed",
+    "lint": "passed with existing warnings",
+    "localeParity": "passed",
+    "strictViteSecrets": "passed"
+  },
+  "npmAudit": {
+    "moderate": 4,
+    "high": 0,
+    "critical": 0
+  },
+  "productionDeployment": "not performed",
+  "merge": "not performed"
+}

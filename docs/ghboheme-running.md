@@ -6,7 +6,7 @@ credits remain in place. This is a reviewable beta, not a completed production r
 
 ## Local web
 
-Use Node 22 or newer and the existing installation/preflight instructions.
+Use Node 24 from `.nvmrc` and the existing installation/preflight instructions.
 Run `npm ci`, then `npm run dev`, and open the intelligence URL on the printed local
 address. `npm run build:intelligence` builds the shared SPA/PWA without rebuilding
 the independent blog and Pro marketing surfaces. `npm run preview` serves that build.
@@ -19,6 +19,21 @@ summaries invoke the existing providers only when requested; unavailable provide
 leave the source extract readable. Generated summaries retain provider provenance,
 require review and never replace source evidence. Arabic requests do not substitute
 the existing English browser model for an Arabic model.
+
+## Performance modes
+
+The shared Auto / Economy / Full preference appears in both GBoheme settings
+and the original dashboard Settings tab. Auto treats CPU/memory hints of four or
+less, reduced motion, or Save-Data as economy signals; missing hints preserve the
+full path. These are browser estimates, not measured hardware specifications.
+Economy starts the original map in SVG, reduces decorative motion, and defers local
+AI startup and headline-memory weights. The 3D button remains available explicitly;
+its quality is capped while economy is selected. Existing AI toggles and an opted-in
+English summary action can start the worker on demand. Arabic does not use an
+English-only model. Source intervals and important-alert admission remain unchanged.
+
+See [measured performance](gboheme-performance.md), [confirmed audit findings](gboheme-engineering-audit.md)
+and [delivery limits](gboheme-delivery-status.md) for this repair's evidence.
 
 ## News and alerts
 

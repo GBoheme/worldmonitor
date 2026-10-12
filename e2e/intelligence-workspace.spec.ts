@@ -111,8 +111,11 @@ test('performance modes persist, retain news, and share the original settings', 
  await page.locator('.gi-sidebar [data-section="home"]').click();
  await expect(page.locator('#gi-cards .gi-card')).toHaveCount(1);
  await page.locator('.gi-sidebar [data-section="settings"]').click();
+ await page.setViewportSize({width:1280,height:1000});
+ await page.evaluate(()=>{document.querySelector('.gi-root')?.scrollTo(0,0);window.scrollTo(0,0);});
  await page.screenshot({path:resolve(output,'gboheme-performance-desktop-ar.png'),fullPage:true});
  await page.setViewportSize({width:390,height:844});
+ await page.evaluate(()=>{document.querySelector('.gi-root')?.scrollTo(0,0);window.scrollTo(0,0);});
  await page.screenshot({path:resolve(output,'gboheme-performance-mobile-ar.png'),fullPage:true});
  await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await page.locator('#gi-performance').selectOption('full');
