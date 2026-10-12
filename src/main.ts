@@ -1,4 +1,6 @@
 import './styles/base-layer.css';
+import './styles/device-performance.css';
+import { initializeDevicePerformance } from '@/config/device-performance';
 import './bootstrap/zod-csp';
 import { SITE_VARIANT } from '@/config/variant';
 import { isGbohemeMobileRuntime } from '@/services/desktop-runtime';
@@ -594,6 +596,7 @@ installStaleBundleCheck();
 loadDesktopSecrets().catch(() => {});
 
 // Apply stored theme preference before app initialization (safety net for inline script)
+initializeDevicePerformance();
 applyStoredTheme();
 applyFont();
 applyFontScale();

@@ -3992,5 +3992,15 @@
     "summarize": "Optional summary",
     "summarizing": "Requesting a summary from an available provider…",
     "summaryUnavailable": "No suitable provider or enough source text; the original extract remains available."
+  },
+  "performance": {
+    "title": "Device performance",
+    "modes": {
+      "auto": "Auto",
+      "economy": "Economy",
+      "full": "Full"
+    },
+    "effective": "Active mode",
+    "description": "Auto uses approximate device, data-saving and motion hints. Economy starts with SVG and defers local AI; advanced maps remain available on request. News and important alerts keep their source intervals."
   }
 }

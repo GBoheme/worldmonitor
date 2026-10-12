@@ -1,3 +1,5 @@
+import { getEffectivePerformanceMode } from '@/config/device-performance';
+
 export type GlobeRenderScale = 'auto' | '1' | '1.5' | '2' | '3';
 export type GlobeTexture = 'topographic' | 'blue-marble';
 
@@ -52,6 +54,7 @@ export function subscribeGlobeRenderScaleChange(cb: (scale: GlobeRenderScale) =>
 }
 
 export function resolveGlobePixelRatio(scale: GlobeRenderScale): number {
+  if (getEffectivePerformanceMode() === 'economy') return 1;
   const dpr = (typeof window !== 'undefined' ? window.devicePixelRatio : 1) || 1;
   if (scale === 'auto') return Math.min(1.5, Math.max(1, dpr));
   const num = Number(scale);
@@ -66,7 +69,7 @@ export interface GlobePerformanceProfile {
 }
 
 export function resolvePerformanceProfile(scale: GlobeRenderScale): GlobePerformanceProfile {
-  const isEco = scale === '1';
+  const isEco = scale === '1' || getEffectivePerformanceMode() === 'economy';
   return {
     disablePulseAnimations: isEco,
     disableDashAnimations: isEco,

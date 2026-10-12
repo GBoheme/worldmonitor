@@ -1,3 +1,4 @@
+import { DEVICE_PERFORMANCE_MODES, getDevicePerformanceMode, setDevicePerformanceMode } from '@/config/device-performance';
 import { LANGUAGES, getCurrentLanguageTag, changeLanguage, t } from '@/services/i18n';
 import { getAiFlowSettings, setAiFlowSetting, getStreamQuality, setStreamQuality, STREAM_QUALITY_OPTIONS } from '@/services/ai-flow-settings';
 import { getMapProvider, setMapProvider, MAP_PROVIDER_OPTIONS, MAP_THEME_OPTIONS, getMapTheme, setMapTheme, type MapProvider } from '@/config/basemap';
@@ -142,6 +143,12 @@ function handlePreferenceChange(
     return setPersonalNewsCategory(id as PersonalNewsCategoryId, target.checked);
   }
   switch (target.id) {
+    case 'us-performance-mode': {
+      const persisted = setDevicePerformanceMode(target.value as 'auto' | 'economy' | 'full');
+      const status = container.querySelector('#us-performance-status');
+      if (status) status.textContent = t(persisted ? 'personalNews.saved' : 'personalNews.sessionOnly');
+      return persisted;
+    }
     case 'us-stream-quality':
       setStreamQuality(target.value as StreamQuality);
       return true;
@@ -232,6 +239,10 @@ export function renderPreferences(host: PreferencesHost): PreferencesResult {
   html += `<details class="wm-pref-group" open>`;
   html += `<summary>${t('preferences.display')}</summary>`;
   html += `<div class="wm-pref-group-content">`;
+
+  html += `<label for="us-performance-mode">${escapeHtml(t('performance.title'))}</label>
+    <select class="unified-settings-select" id="us-performance-mode">${DEVICE_PERFORMANCE_MODES.map(mode => `<option value="${mode}"${mode === getDevicePerformanceMode() ? ' selected' : ''}>${escapeHtml(t('performance.modes.' + mode))}</option>`).join('')}</select>
+    <p>${escapeHtml(t('performance.description'))}</p><p id="us-performance-status" role="status"></p>`;
 
   // Appearance
   const currentThemePref = getThemePreference();

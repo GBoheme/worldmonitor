@@ -99,3 +99,33 @@ test('offline fallback renders stored source text safely without external bundle
  await expect(page.locator('article')).toContainText('تاريخ النشر غير معروف');
  await expect(page.locator('article')).toContainText('<img src=x');
 });
+
+test('performance modes persist, retain news, and share the original settings', async ({ page }) => {
+ await seed(page);
+ await page.locator('.gi-sidebar [data-section="settings"]').click();
+ await page.locator('#gi-performance').selectOption('economy');
+ await expect(page.locator('html')).toHaveAttribute('data-performance-mode', 'economy');
+ await expect(page.locator('#gi-performance')).toHaveValue('economy');
+ await expect(page.locator('[data-category]:checked')).toHaveCount(10);
+ await page.reload(); await expect(page.locator('#gi-performance')).toHaveValue('economy');
+ await page.locator('.gi-sidebar [data-section="home"]').click();
+ await expect(page.locator('#gi-cards .gi-card')).toHaveCount(1);
+ await page.locator('.gi-sidebar [data-section="settings"]').click();
+ await page.screenshot({path:resolve(output,'gboheme-performance-desktop-ar.png'),fullPage:true});
+ await page.setViewportSize({width:390,height:844});
+ await page.screenshot({path:resolve(output,'gboheme-performance-mobile-ar.png'),fullPage:true});
+ await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.locator('#gi-performance').selectOption('full');
+ await expect(page.locator('html')).toHaveAttribute('data-performance-mode','full');
+ await page.locator('#gi-performance').selectOption('auto'); await expect(page.locator('#gi-performance')).toHaveValue('auto');
+ await page.setViewportSize({width:1280,height:800});
+ await page.route('**/api/**', route => route.fulfill({ json: {} }));
+ await page.goto('/dashboard');
+ await page.locator('#unifiedSettingsBtn').click();
+ await page.locator('#us-tab-settings').click();
+ await expect(page.locator('#us-performance-mode')).toHaveValue('auto');
+ await page.locator('#us-performance-mode').selectOption('economy');
+ await expect(page.locator('html')).toHaveAttribute('data-performance-mode','economy');
+ await page.goto('/dashboard?intelligence=1&section=settings');
+ await expect(page.locator('#gi-performance')).toHaveValue('economy');
+});

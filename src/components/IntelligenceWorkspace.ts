@@ -13,6 +13,7 @@ import { selectIntelligenceAlerts, deliverIntelligenceDeviceAlert } from '@/serv
 import { prepareIntelligenceDraft } from '@/services/intelligence-publisher';
 import { getIntelligenceArticles, saveIntelligenceArticles, getIntelligenceAlerts, saveIntelligenceAlerts,
   getIntelligenceDrafts, saveIntelligenceDrafts, hasIntelligenceConnectorConfigs, getIntelligenceConnectorConfigs, saveIntelligenceConnectorConfigs } from '@/services/intelligence-store';
+import { DEVICE_PERFORMANCE_MODES, getDevicePerformanceMode, getEffectivePerformanceMode, setDevicePerformanceMode, DEVICE_PERFORMANCE_CHANGED_EVENT } from '@/config/device-performance';
 import '../styles/intelligence.css';
 
 const sections = ['home', 'world', 'tech', 'github', 'iraq', 'markets', 'breaking', 'saved', 'digest', 'sources', 'alerts', 'publisher', 'settings'] as const;
@@ -73,6 +74,7 @@ export class IntelligenceWorkspace {
       const input = event.target as HTMLInputElement;
       if (input.id === 'gi-search') { this.query = input.value; this.updateCards(); }
     }, { signal });
+    window.addEventListener(DEVICE_PERFORMANCE_CHANGED_EVENT, () => this.render(), { signal });
     window.addEventListener(PERSONAL_NEWS_CHANGED_EVENT, () => { this.rebuild(); this.render(); }, { signal });
     window.addEventListener('storage', () => {
       this.saved = getIntelligenceArticles('saved'); this.alerts = getIntelligenceAlerts(); this.rebuild(); this.render();
@@ -106,19 +108,21 @@ export class IntelligenceWorkspace {
   private async refresh(): Promise<void> {
     if (this.destroyed || this.busy) return;
     if (!navigator.onLine) { this.showNotice('offline'); return; }
+    const due = this.connectors.filter(connector => connector.isDue());
+    if (!due.length) return;
     this.busy = true;
     const generation = ++this.generation;
     const controller = new AbortController(); this.refreshController = controller;
     this.updateStatus();
     const collected = new Map<string, IntelligenceArticle[]>();
     try {
-      for (let index = 0; index < this.connectors.length; index += 2) {
-        const group = this.connectors.slice(index, index + 2);
+      for (let index = 0; index < due.length; index += 2) {
+        const group = due.slice(index, index + 2);
         const batch = await Promise.allSettled(group.map(connector => connector.sync(controller.signal)));
         if (generation !== this.generation || this.destroyed) return;
         batch.forEach((result, offset) => {
           const connector = group[offset]!;
-          if (result.status === 'fulfilled') collected.set(connector.config.id, result.value.items);
+          if (result.status === 'fulfilled' && result.value.status.state === 'ready') collected.set(connector.config.id, result.value.items);
         });
         const newItems = [...collected.values()].flat();
         // Keep last-good articles from uncompleted/failed sources, and replace
@@ -263,7 +267,7 @@ export class IntelligenceWorkspace {
   }
   private settingsHtml(): string {
     const preferences = getPersonalNewsPreferences();
-    return `<section class="gi-settings"><h2>${e(t('personalNews.interests'))}</h2><p>${e(t('personalNews.interestsDesc'))}</p><div class="gi-settings-grid">${PERSONAL_NEWS_CATEGORIES.map(category => `<label class="gi-toggle"><span>${e(t('personalNews.categories.' + category.id))}</span><input type="checkbox" data-category="${category.id}"${preferences.categories[category.id] ? ' checked' : ''}></label>`).join('')}</div>
+    return `<section class="gi-settings"><label>${e(t('performance.title'))}<select id="gi-performance">${DEVICE_PERFORMANCE_MODES.map(mode => `<option value="${mode}"${mode === getDevicePerformanceMode() ? ' selected' : ''}>${e(t('performance.modes.' + mode))}</option>`).join('')}</select></label><p>${e(t('performance.description'))}</p><p>${e(t('performance.effective'))}: ${e(t('performance.modes.' + getEffectivePerformanceMode()))}</p><h2>${e(t('personalNews.interests'))}</h2><p>${e(t('personalNews.interestsDesc'))}</p><div class="gi-settings-grid">${PERSONAL_NEWS_CATEGORIES.map(category => `<label class="gi-toggle"><span>${e(t('personalNews.categories.' + category.id))}</span><input type="checkbox" data-category="${category.id}"${preferences.categories[category.id] ? ' checked' : ''}></label>`).join('')}</div>
       <h2>${tr('sections.alerts')}</h2><label class="gi-toggle"><span>${tr('importantOnly')}</span><input id="gi-alert-enabled" type="checkbox"${preferences.notificationPolicy !== 'off' ? ' checked' : ''}></label>
       <p>${tr('alertsDesc')}</p><button type="button" data-action="notifications">${tr('enableDeviceNotifications')}</button><label class="gi-toggle"><span>${tr('deviceNotifications')}</span><input id="gi-device-enabled" type="checkbox"${preferences.localNotifications ? ' checked' : ''}></label>
       <h3>${tr('alertTopics')}</h3><div class="gi-settings-grid">${PERSONAL_NEWS_CATEGORIES.map(category => `<label class="gi-toggle"><span>${e(t('personalNews.categories.' + category.id))}</span><input type="checkbox" data-alert-category="${category.id}"${!preferences.disabledAlertCategories.includes(category.id) ? ' checked' : ''}></label>`).join('')}</div>
@@ -355,6 +359,12 @@ export class IntelligenceWorkspace {
     }
   }
   private async onChange(event: Event): Promise<void> {
+    const performanceSelect = event.target as HTMLSelectElement;
+    if (performanceSelect.id === 'gi-performance') {
+      const persisted = setDevicePerformanceMode(performanceSelect.value as 'auto' | 'economy' | 'full');
+      this.savedResult(persisted);
+      return;
+    }
     const input = event.target as HTMLInputElement;
     if (input.id === 'gi-section') { this.navigate(input.value as Section); return; }
     if (input.id === 'gi-source') { this.sourceFilter = input.value; this.updateCards(); return; }

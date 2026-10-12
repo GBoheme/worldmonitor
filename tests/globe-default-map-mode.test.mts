@@ -90,7 +90,7 @@ describe('default map mode', () => {
 
     assert.match(
       mapContainer,
-      /this\.useGlobe\s*=\s*preferGlobe\s*&&\s*this\.hasGlobeSupport\(\)/,
+      /this\.useGlobe\s*=\s*getEffectivePerformanceMode\(\) !== 'economy'\s*&&\s*preferGlobe\s*&&\s*this\.hasGlobeSupport\(\)/,
       'globe mode should use its own capability check',
     );
     assert.match(

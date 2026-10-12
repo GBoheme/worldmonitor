@@ -80,6 +80,13 @@ export class IntelligenceConnector {
   }
   getStatus(): IntelligenceConnectorStatus { return { ...this.status }; }
 
+  /** One scheduling authority for TTL/backoff; blocked account connectors transition once. */
+  isDue(): boolean {
+    if (!this.config.enabled || this.inFlight) return false;
+    if (!this.status.canRead) return this.status.state === 'idle';
+    return (this.dependencies.now?.() ?? Date.now()) >= this.status.nextAttempt;
+  }
+
   sync(signal?: AbortSignal): Promise<IntelligenceConnectorResult> {
     if (this.inFlight) return this.inFlight;
     const now = this.dependencies.now?.() ?? Date.now();
