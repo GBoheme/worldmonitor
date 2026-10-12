@@ -4,6 +4,7 @@
  * Renders DeckGLMap (WebGL) on desktop, fallback to D3/SVG MapComponent on mobile.
  * Supports an optional 3D globe mode (globe.gl) selectable from Settings.
  */
+import { getEffectivePerformanceMode, subscribeDevicePerformanceChange } from '@/config/device-performance';
 import { isMobileDevice } from '@/utils';
 import { markLcpDebug } from '@/utils/lcp-debug';
 import {
@@ -173,6 +174,8 @@ export class MapContainer {
   private deckGLMap: DeckGLMap | null = null;
   private svgMap: MapComponent | null = null;
   private globeMap: GlobeMap | null = null;
+  private renderPaused = false;
+  private unsubscribePerformance: (() => void) | null = null;
   private supplyChainPanel: import('@/components/SupplyChainPanel').SupplyChainPanel | null = null;
   private initialState: MapContainerState;
   private useDeckGL: boolean;
@@ -285,7 +288,7 @@ export class MapContainer {
     this.isFreeTierFallbackActive = options.isFreeTierFallbackActive ?? null;
     this.isMobile = isMobileDevice();
     this.preferDesktopRenderer = options.preferDesktopRenderer ?? false;
-    this.useGlobe = preferGlobe && this.hasGlobeSupport();
+    this.useGlobe = getEffectivePerformanceMode() !== 'economy' && preferGlobe && this.hasGlobeSupport();
 
     this.useDeckGL = !this.useGlobe && this.shouldUseDeckGL();
 
@@ -306,16 +309,22 @@ export class MapContainer {
 
     // init() attaches the resize observer synchronously (before its first await),
     // so the constructor does not need to start it separately.
+    this.unsubscribePerformance = subscribeDevicePerformanceChange(() => {
+      if (getEffectivePerformanceMode() === 'economy' || !this.useGlobe) {
+        void this.switchToFlat().catch(error => console.warn('[MapContainer] Performance renderer switch failed', error));
+      }
+    });
     void this.init();
   }
 
   private hasWebGLSupport(): boolean {
+    let gl2: WebGL2RenderingContext | null = null;
     try {
       const canvas = document.createElement('canvas');
       // deck.gl + maplibre rely on WebGL2 features in desktop mode.
       // Some Linux WebKitGTK builds expose only WebGL1, which can lead to
       // an empty/black render surface instead of a usable map.
-      const gl2 = canvas.getContext('webgl2');
+      gl2 = canvas.getContext('webgl2');
       if (!gl2) return false;
       const debugInfo = gl2.getExtension('WEBGL_debug_renderer_info');
       if (debugInfo) {
@@ -327,23 +336,26 @@ export class MapContainer {
       return true;
     } catch {
       return false;
+    } finally {
+      try { gl2?.getExtension('WEBGL_lose_context')?.loseContext(); } catch { /* best-effort */ }
     }
   }
 
   private hasGlobeSupport(): boolean {
+    let gl: WebGLRenderingContext | null = null;
     try {
       const canvas = document.createElement('canvas');
-      return !!(
-        canvas.getContext('webgl2')
-        || canvas.getContext('webgl')
-        || canvas.getContext('experimental-webgl')
-      );
+      gl = (canvas.getContext('webgl2') || canvas.getContext('webgl') || canvas.getContext('experimental-webgl')) as WebGLRenderingContext | null;
+      return !!gl;
     } catch {
       return false;
+    } finally {
+      try { gl?.getExtension('WEBGL_lose_context')?.loseContext(); } catch { /* best-effort */ }
     }
   }
 
   private shouldUseDeckGL(): boolean {
+    if (getEffectivePerformanceMode() === 'economy') return false;
     // Keep the default mobile path on the lightweight SVG renderer. High-end
     // phones can still request globe mode explicitly via the persisted mode,
     // but they should not pull Deck/MapLibre before first paint by default.
@@ -768,11 +780,12 @@ export class MapContainer {
 
   /** Switch back to flat map at runtime (called from Settings). */
   public switchToFlat(): Promise<MapRendererSwitchResult> {
-    if (this.useGlobe) {
+    if (this.useGlobe || this.useDeckGL !== this.shouldUseDeckGL()) {
       const snapshot = this.getState();
       const center = this.getCenter();
       this.resizeObserver?.disconnect();
       this.resizeObserver = null;
+      this.destroyFlatMap();
       this.globeInitToken++;
       this.globeMap?.destroy();
       this.globeMap = null;
@@ -792,6 +805,7 @@ export class MapContainer {
   }
 
   private rehydrateActiveMap(): void {
+    this.setRenderPaused(this.renderPaused);
     // 1. Re-wire callbacks (through own public methods for adapter safety)
     if (this.cachedOnStateChanged) this.onStateChanged(this.cachedOnStateChanged);
     if (this.cachedOnLayerChange) this.setOnLayerChange(this.cachedOnLayerChange);
@@ -1723,6 +1737,8 @@ export class MapContainer {
   }
 
   public setRenderPaused(paused: boolean): void {
+    this.renderPaused = paused;
+    if (this.useGlobe) this.globeMap?.setRenderPaused(paused);
     if (this.useDeckGL) {
       this.deckGLMap?.setRenderPaused(paused);
     }
@@ -1804,6 +1820,8 @@ export class MapContainer {
 
   public destroy(): void {
     this.destroyed = true;
+    this.unsubscribePerformance?.();
+    this.unsubscribePerformance = null;
     this.container.removeEventListener('pointerdown', this.invalidateViewportAuthority);
     this.container.removeEventListener('wheel', this.invalidateViewportAuthority);
     this.container.removeEventListener('touchstart', this.invalidateViewportAuthority);

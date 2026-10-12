@@ -1,4 +1,5 @@
 import { Panel } from './Panel';
+import { deduplicatePersonalNews, filterPersonalNews, getPersonalNewsPreferences, PERSONAL_NEWS_CHANGED_EVENT, PERSONAL_NEWS_STORAGE_KEY } from '@/services/personal-news';
 import { WindowedList } from './VirtualList';
 import type { NewsItem, ClusteredEvent, DeviationLevel, RelatedAsset, RelatedAssetContext } from '@/types';
 import { THREAT_PRIORITY } from '@/services/threat-classifier';
@@ -48,6 +49,15 @@ export interface NewsPanelServices {
 export class NewsPanel extends Panel {
   private readonly newsServices: NewsPanelServices;
   private clusteredMode = true;
+  private unfilteredNews: NewsItem[] = [];
+  private personalNewsDestroyed = false;
+  private readonly onPersonalNewsChanged = () => this.renderNews(this.unfilteredNews);
+  private readonly onPersonalNewsStorage = (event: StorageEvent) => {
+    if (event.key === null || event.key === PERSONAL_NEWS_STORAGE_KEY) this.onPersonalNewsChanged();
+  };
+  private readonly onPersonalNewsCloudApplied = (event: Event) => {
+    if ((event as CustomEvent<{ keys?: string[] }>).detail?.keys?.includes(PERSONAL_NEWS_STORAGE_KEY)) this.onPersonalNewsChanged();
+  };
   private deviationEl: HTMLElement | null = null;
   private relatedAssetContext = new Map<string, RelatedAssetContext>();
   private onRelatedAssetClick?: (asset: RelatedAsset) => void;
@@ -107,6 +117,9 @@ export class NewsPanel extends Panel {
     services: Partial<NewsPanelServices> = {},
   ) {
     super({ id, title, showCount: true, trackActivity: true, infoTooltip });
+    window.addEventListener(PERSONAL_NEWS_CHANGED_EVENT, this.onPersonalNewsChanged);
+    window.addEventListener('storage', this.onPersonalNewsStorage);
+    window.addEventListener('wm:cloud-prefs-applied', this.onPersonalNewsCloudApplied);
     this.newsServices = {
       clusterNews: items => analysisWorker.clusterNews(items),
       generateSummary,
@@ -489,6 +502,14 @@ export class NewsPanel extends Panel {
   }
 
   public renderNews(items: NewsItem[]): void {
+    if (this.personalNewsDestroyed) return;
+    this.unfilteredNews = [...items];
+    this.renderRequestId += 1; // Invalidate any clustering task from the previous preference state.
+    const visibleItems = filterPersonalNews(deduplicatePersonalNews(items), getPersonalNewsPreferences());
+    if (visibleItems.length === 0 && items.length > 0) {
+      this.renderFilteredEmpty(t('personalNews.filteredEmpty'), true);
+      return;
+    }
     if (items.length === 0) {
       this.renderRequestId += 1; // Cancel in-flight clustering from previous renders.
       this.renderedBadgeState = 'unavailable';
@@ -501,14 +522,15 @@ export class NewsPanel extends Panel {
 
     // Always show flat items immediately for instant visual feedback,
     // then upgrade to clustered view in the background when ready.
-    this.renderFlat(items);
+    this.renderFlat(visibleItems);
 
     if (this.clusteredMode) {
-      void this.renderClustersAsync(items);
+      void this.renderClustersAsync(visibleItems);
     }
   }
 
-  public renderFilteredEmpty(message: string): void {
+  public renderFilteredEmpty(message: string, preservePersonalInput = false): void {
+    if (!preservePersonalInput) this.unfilteredNews = [];
     this.renderRequestId += 1; // Cancel in-flight clustering from previous renders.
     this.lastRawClusters = null;
     this.lastRawItems = null;
@@ -528,6 +550,7 @@ export class NewsPanel extends Panel {
       const clusters = await this.newsServices.clusterNews(items);
       if (requestId !== this.renderRequestId) return;
       const enriched = await enrichWithVelocityML(clusters);
+      if (requestId !== this.renderRequestId || this.personalNewsDestroyed) return;
       this.renderClusters(enriched);
     } catch (error) {
       if (requestId !== this.renderRequestId) return;
@@ -961,6 +984,12 @@ export class NewsPanel extends Panel {
    * Clean up resources
    */
   public destroy(): void {
+    this.personalNewsDestroyed = true;
+    this.renderRequestId += 1;
+    this.unfilteredNews = [];
+    window.removeEventListener(PERSONAL_NEWS_CHANGED_EVENT, this.onPersonalNewsChanged);
+    window.removeEventListener('storage', this.onPersonalNewsStorage);
+    window.removeEventListener('wm:cloud-prefs-applied', this.onPersonalNewsCloudApplied);
     // Clean up windowed list
     this.windowedList?.destroy();
     this.windowedList = null;

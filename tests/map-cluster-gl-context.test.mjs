@@ -103,19 +103,8 @@ describe('cluster canvas WebGL context guard (WORLDMONITOR-YG/YH)', () => {
     }
   });
 
-  it('keeps Map.ts on the shared guard instead of a bare null check', () => {
-    // The predicate is only load-bearing if Map.ts actually routes through it.
-    const init = mapSrc.match(/private initClusterRenderer\(\): void \{[\s\S]*?\n {2}\}/);
-    assert.ok(init, 'could not locate initClusterRenderer() body');
-    assert.match(
-      init[0],
-      /resolveClusterGlContext\(/,
-      'initClusterRenderer() must acquire the context via resolveClusterGlContext()',
-    );
-    assert.doesNotMatch(
-      init[0],
-      /getContext\(/,
-      'initClusterRenderer() must not call getContext() directly — the shape check lives in resolveClusterGlContext()',
-    );
+  it('keeps the HTML-marker SVG renderer free of unused WebGL contexts', () => {
+    assert.doesNotMatch(mapSrc, /resolveClusterGlContext|clusterGl|initClusterRenderer/);
+    assert.match(mapSrc, /all layers use HTML markers/);
   });
 });

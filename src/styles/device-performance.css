@@ -1,0 +1,5 @@
+/* Economy preserves static cues while removing decorative motion. */
+[data-performance-mode="economy"] *,
+[data-performance-mode="economy"] *::before,
+[data-performance-mode="economy"] *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+[data-performance-mode="economy"] .gi-header { backdrop-filter: none; }

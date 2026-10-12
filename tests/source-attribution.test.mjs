@@ -308,6 +308,10 @@ test('the independent raw-manifest oracle catches an active-predicate mutation',
       mutantPath,
       source
         .replace(
+          "from './lib/main-module.mjs'",
+          `from ${JSON.stringify(pathToFileURL(join(rootDir, 'scripts/lib/main-module.mjs')).href)}`,
+        )
+        .replace(
           "from './source-catalog-identity.mjs'",
           `from ${JSON.stringify(pathToFileURL(join(rootDir, 'scripts/source-catalog-identity.mjs')).href)}`,
         )
@@ -1210,6 +1214,20 @@ test('the check gate passes on a checkout the generator just wrote', () => {
   } finally {
     fixture.cleanup();
   }
+});
+
+test('Windows CRLF docs regenerate once without appending another inventory', () => {
+  const fixture = makeFixtureCheckout();
+  try {
+    const path = join(fixture.dir, 'docs/source-attribution.mdx');
+    writeFileSync(path, readFileSync(path, 'utf8').replaceAll('\n', '\r\n'));
+    assert.ok(matchGeneratedAttributionSection(readFileSync(path, 'utf8')));
+    for (let i = 0; i < 2; i++) {
+      assert.equal(runSourceAttribution({ rootDir: fixture.dir, args: ['--write'], log: () => {}, warn: () => {}, reportError: message => assert.fail(message) }), 0);
+    }
+    assert.equal(readFileSync(path, 'utf8').split('BEGIN GENERATED SOURCE ATTRIBUTION').length - 1, 1);
+    assert.deepEqual(checkSourceAttribution(fixture.dir).errors, []);
+  } finally { fixture.cleanup(); }
 });
 
 test('the check gate goes red on manifest, docs, and logical-entry drift', () => {

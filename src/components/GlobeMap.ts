@@ -24,6 +24,7 @@ import { NUCLEAR_FACILITIES, SPACEPORTS, ECONOMIC_CENTERS, CRITICAL_MINERALS, UN
 import { PIPELINES } from '@/config/pipelines';
 import { t } from '@/services/i18n';
 import { SITE_VARIANT } from '@/config/variant';
+import { getEffectivePerformanceMode, subscribeDevicePerformanceChange } from '@/config/device-performance';
 import { getGlobeRenderScale, resolveGlobePixelRatio, resolvePerformanceProfile, subscribeGlobeRenderScaleChange, getGlobeTexture, GLOBE_TEXTURE_URLS, subscribeGlobeTextureChange, getGlobeVisualPreset, subscribeGlobeVisualPresetChange, type GlobeRenderScale, type GlobePerformanceProfile, type GlobeVisualPreset } from '@/services/globe-render-settings';
 import {
   getLayerExplanation,
@@ -702,10 +703,14 @@ export class GlobeMap {
     this.satHoverStyle = satStyle;
 
     this.unsubscribeGlobeQuality?.();
-    this.unsubscribeGlobeQuality = subscribeGlobeRenderScaleChange((scale) => {
-      this.applyRenderQuality(scale);
-      this.applyPerformanceProfile(resolvePerformanceProfile(scale));
-    });
+    const applyQuality = () => {
+      this.applyRenderQuality(getGlobeRenderScale());
+      this.applyPerformanceProfile(resolvePerformanceProfile(getGlobeRenderScale()));
+      this.applyVisualPreset(getGlobeVisualPreset());
+    };
+    const unsubscribeScale = subscribeGlobeRenderScaleChange(applyQuality);
+    const unsubscribePerformance = subscribeDevicePerformanceChange(applyQuality);
+    this.unsubscribeGlobeQuality = () => { unsubscribeScale(); unsubscribePerformance(); };
 
     // Initial sizing: use container dimensions, fall back to window if not yet laid out
     const initW = this.container.clientWidth || window.innerWidth;
@@ -782,7 +787,7 @@ export class GlobeMap {
     // Apply visual enhancements based on preset
     const initialPreset = getGlobeVisualPreset();
     if (initialPreset === 'enhanced') {
-      setTimeout(() => this.applyEnhancedVisuals(), 800);
+      setTimeout(() => this.applyVisualPreset(getGlobeVisualPreset()), 800);
     }
 
     this.unsubscribeVisualPreset = subscribeGlobeVisualPresetChange((preset) => {
@@ -1007,6 +1012,8 @@ export class GlobeMap {
 
     this.globe = globe;
     this.initialized = true;
+    if (this.renderPaused) { this.renderPaused = false; this.setRenderPaused(true); }
+    else if (document.hidden) this.suspendAnimation();
 
     // Apply initial render quality + performance profile
     this.applyRenderQuality(initialScale);
@@ -3178,6 +3185,7 @@ export class GlobeMap {
     this.renderPaused = paused;
 
     if (paused) {
+      this.suspendAnimation();
       if (this.flushTimer) { clearTimeout(this.flushTimer); this.flushTimer = null; }
       if (this.flushMaxTimer) { clearTimeout(this.flushMaxTimer); this.flushMaxTimer = null; }
       this.pendingFlushWhilePaused = true;
@@ -3209,6 +3217,10 @@ export class GlobeMap {
       }
     }
 
+    if (!paused) {
+      this.wakeGlobe();
+      if (this.outerGlow) this.startExtrasLoop();
+    }
     if (!paused && this.pendingFlushWhilePaused) {
       this.pendingFlushWhilePaused = false;
       this.flushMarkers();
@@ -3886,9 +3898,10 @@ export class GlobeMap {
   }
 
   private startExtrasLoop(): void {
-    if (this.extrasAnimFrameId != null) return;
+    if (this.extrasAnimFrameId != null || this.renderPaused || document.hidden || this.destroyed) return;
     const animateExtras = () => {
-      if (this.destroyed) return;
+      this.extrasAnimFrameId = null;
+      if (this.destroyed || this.renderPaused || document.hidden || this.webglLost) return;
       if (this.outerGlow) this.outerGlow.rotation.y += 0.0003;
       if (this.starField) this.starField.rotation.y += 0.00005;
       this.extrasAnimFrameId = requestAnimationFrame(animateExtras);
@@ -3926,7 +3939,7 @@ export class GlobeMap {
 
   private applyVisualPreset(preset: GlobeVisualPreset): void {
     if (!this.globe || this.destroyed) return;
-    if (preset === 'enhanced') {
+    if (preset === 'enhanced' && getEffectivePerformanceMode() !== 'economy') {
       this.removeEnhancedVisuals();
       this.applyEnhancedVisuals();
     } else {
@@ -3990,7 +4003,7 @@ export class GlobeMap {
   // Pause when idle to save CPU; resume on interaction or data change.
 
   private wakeGlobe(): void {
-    if (this.destroyed || !this.globe) return;
+    if (this.destroyed || !this.globe || this.renderPaused || document.hidden || this.webglLost) return;
     if (!this.isGlobeAnimating) {
       this.isGlobeAnimating = true;
       try { (this.globe as any).resumeAnimation?.(); } catch { /* best-effort */ }
@@ -4010,17 +4023,17 @@ export class GlobeMap {
     }, 3000);
   }
 
+  private suspendAnimation(): void {
+    if (this.idleTimer) { clearTimeout(this.idleTimer); this.idleTimer = null; }
+    this.isGlobeAnimating = false;
+    try { this.globe?.pauseAnimation?.(); } catch { /* best-effort */ }
+    if (this.extrasAnimFrameId != null) { cancelAnimationFrame(this.extrasAnimFrameId); this.extrasAnimFrameId = null; }
+  }
+
   private setupVisibilityHandler(): void {
     this.visibilityHandler = () => {
       if (document.hidden) {
-        if (this.isGlobeAnimating && this.globe) {
-          this.isGlobeAnimating = false;
-          try { (this.globe as any).pauseAnimation?.(); } catch { /* ignore */ }
-        }
-        if (this.extrasAnimFrameId != null) {
-          cancelAnimationFrame(this.extrasAnimFrameId);
-          this.extrasAnimFrameId = null;
-        }
+        this.suspendAnimation();
       } else {
         this.wakeGlobe();
         if (this.outerGlow && this.extrasAnimFrameId == null) {

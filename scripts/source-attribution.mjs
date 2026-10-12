@@ -9,6 +9,7 @@
  * checkout (and prevents a credentials-dependent import graph from becoming a
  * documentation check).
  */
+import { isMainModule } from './lib/main-module.mjs';
 import {
   existsSync,
   readFileSync,
@@ -995,6 +996,8 @@ const DYNAMIC_HOSTS = [
 ];
 
 const EXCLUDED_HOSTS = new Set([
+  // Packaging runtime downloads are software distribution, not news/data sources.
+  'nodejs.org',
   'test',
   'test.dodopayments.com',
   'live.dodopayments.com',
@@ -1786,7 +1789,7 @@ function escapeRegExp(value) {
 
 function inventoryMarkerPattern(leadingNewline) {
   return new RegExp(
-    `${leadingNewline ? '\\n' : ''}## (?:Audited|Observed) (?:Upstream|Source) Inventory\\n+` +
+    `${leadingNewline ? '\\r?\\n' : ''}## (?:Audited|Observed) (?:Upstream|Source) Inventory(?:\\r?\\n)+` +
       `${escapeRegExp(BEGIN_MARKER)}[\\s\\S]*?${escapeRegExp(END_MARKER)}`,
   );
 }
@@ -1798,7 +1801,7 @@ export function matchGeneratedAttributionSection(docs) {
 
 function updateDocs(rootDir, section) {
   const path = join(rootDir, DOCS_PATH);
-  const current = readFileSync(path, 'utf8');
+  const current = readFileSync(path, 'utf8').replaceAll('\r\n', '\n');
   const markerPattern = inventoryMarkerPattern(true);
   const updated = markerPattern.test(current)
     // Function replacement: `section` is generated from manifest text that can
@@ -1943,6 +1946,6 @@ export function runSourceAttribution({
   return 0;
 }
 
-if (process.argv[1] && process.argv[1].endsWith('scripts/source-attribution.mjs')) {
+if (isMainModule(import.meta.url, process.argv[1])) {
   process.exitCode = runSourceAttribution({ args: process.argv.slice(2) });
 }

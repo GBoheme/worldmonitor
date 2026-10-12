@@ -39,6 +39,7 @@ import {
   shouldSanitizeLockedLayers,
 } from '@/config/map-layer-definitions';
 import type { MapVariant } from '@/config/map-layer-definitions';
+import { getEffectivePerformanceMode } from '@/config/device-performance';
 import { getStoredMapModePreference } from '@/services/map-mode-preference';
 import { applyCanadaRoadsOptInMigration } from '@/services/canada-roads-opt-in';
 import {
@@ -2469,7 +2470,7 @@ export class App {
     // Same authority as before: browserModel on web, unconditional on desktop.
     // Headline Memory needs no extra disjunct — on web its effective gate
     // already requires browserModel, on desktop the runtime check covers it.
-    if (aiFlow.browserModel || isDesktopRuntime()) {
+    if (getEffectivePerformanceMode() !== 'economy' && (aiFlow.browserModel || isDesktopRuntime())) {
       void (async () => {
         try {
           const ready = await mlWorker.init();
@@ -2490,7 +2491,7 @@ export class App {
     // opted out of via the parent toggle. Joins the detached boot continuation
     // above (shared in-flight init, no duplicate worker): on slow workers this
     // waits without blocking layout or panels.
-    if (isHeadlineMemoryEnabled()) {
+    if (getEffectivePerformanceMode() !== 'economy' && isHeadlineMemoryEnabled()) {
       void mlWorker.whenReady('app-boot:headline-memory').then((ready) => {
         if (!ready) return;
         if (this.localAiInitEpoch !== localAiEpoch || this.state.isDestroyed) return;

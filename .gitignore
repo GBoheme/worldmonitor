@@ -155,3 +155,10 @@ playground-pricing.html
 # compile time — `cargo test` fails on a resource path that does not exist.
 src-tauri/notices/*
 !src-tauri/notices/.gitkeep
+
+# Local package downloads used by agent bootstrap
+npm-cache/
+
+# Dedicated native frontend output
+dist-gboheme-desktop/
+dist-gboheme-mobile/

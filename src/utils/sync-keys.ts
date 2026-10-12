@@ -5,6 +5,8 @@ import {
 } from '../../shared/cloud-preferences-contract';
 
 export const CLOUD_SYNC_KEYS = [
+  'ghboheme-personal-news-v1',
+  'ghboheme-saved-news-v1',
   'worldmonitor-panels',
   'worldmonitor-monitors',
   'worldmonitor-layers',

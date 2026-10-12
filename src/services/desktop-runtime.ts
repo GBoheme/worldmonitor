@@ -20,6 +20,7 @@ const ENV = (() => {
   try {
     return {
       VITE_DESKTOP_RUNTIME: import.meta.env.VITE_DESKTOP_RUNTIME,
+      VITE_GBOHEME_MOBILE: import.meta.env.VITE_GBOHEME_MOBILE,
     };
   } catch {
     return {} as Record<string, string | undefined>;
@@ -27,6 +28,7 @@ const ENV = (() => {
 })();
 
 const FORCE_DESKTOP_RUNTIME = ENV.VITE_DESKTOP_RUNTIME === '1';
+export function isGbohemeMobileRuntime(): boolean { return ENV.VITE_GBOHEME_MOBILE === '1'; }
 
 export type RuntimeProbe = {
   hasTauriGlobals: boolean;
@@ -97,6 +99,7 @@ function currentProbe(): RuntimeProbe {
  * relying on the location heuristic at all.
  */
 export function hasExplicitDesktopSignals(): boolean {
+  if (isGbohemeMobileRuntime()) return false;
   if (FORCE_DESKTOP_RUNTIME) {
     return true;
   }
@@ -109,6 +112,7 @@ export function hasExplicitDesktopSignals(): boolean {
 }
 
 export function isDesktopRuntime(): boolean {
+  if (isGbohemeMobileRuntime()) return false;
   if (FORCE_DESKTOP_RUNTIME) {
     return true;
   }

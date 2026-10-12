@@ -89,7 +89,6 @@ import {
   startCountryClickGesture,
   updateCountryClickGestureDrag,
 } from './map-interaction-guard';
-import { resolveClusterGlContext } from './map-cluster-gl';
 
 
 export type TimeRange = '1h' | '6h' | '24h' | '48h' | '7d' | 'all';
@@ -180,7 +179,6 @@ export class MapComponent {
   private overlays: HTMLElement;
   private markerSettleTimer: ReturnType<typeof setTimeout> | null = null;
   private clusterCanvas: HTMLCanvasElement;
-  private clusterGl: WebGLRenderingContext | null = null;
   private state: MapState;
   private layerExplanationOutsideClickHandler: ((event: MouseEvent) => void) | null = null;
   private worldData: WorldTopology | null = null;
@@ -355,7 +353,6 @@ export class MapComponent {
     this.baseLayerGroup = this.svg.append('g').attr('class', 'map-base');
     this.dynamicLayerGroup = this.svg.append('g').attr('class', 'map-dynamic');
     this.popup = new MapPopup(container);
-    this.initClusterRenderer();
 
     this.setupZoomHandlers();
     this.loadMapData();
@@ -1230,25 +1227,10 @@ export class MapComponent {
     }
   }
 
-  private initClusterRenderer(): void {
-    // WebGL clustering disabled - just get context for clearing canvas.
-    // resolveClusterGlContext() rejects the truthy-but-method-less stub that
-    // canvas fingerprint blockers return, which used to crash the whole
-    // dynamic-layer render pass from clearClusterCanvas() (WORLDMONITOR-YG/YH).
-    this.clusterGl = resolveClusterGlContext(this.clusterCanvas);
-  }
-
-  private clearClusterCanvas(): void {
-    if (!this.clusterGl) return;
-    this.clusterGl.clearColor(0, 0, 0, 0);
-    this.clusterGl.clear(this.clusterGl.COLOR_BUFFER_BIT);
-  }
-
   private renderClusterLayer(_projection: d3.GeoProjection): void {
     // WebGL clustering disabled - all layers use HTML markers for visual fidelity
     // (severity colors, emoji icons, magnitude sizing, animations)
     this.wrapper.classList.toggle('cluster-active', false);
-    this.clearClusterCanvas();
   }
 
   public scheduleRender(): void {

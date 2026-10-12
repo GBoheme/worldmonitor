@@ -918,6 +918,7 @@ export default defineConfig(({ mode }) => {
 
   const isE2E = process.env.VITE_E2E === '1';
   const isDesktopBuild = process.env.VITE_DESKTOP_RUNTIME === '1';
+  const isMobileBuild = process.env.VITE_GBOHEME_MOBILE === '1';
   const activeVariant = process.env.VITE_VARIANT || 'full';
   const activeMeta = VARIANT_META[activeVariant] || VARIANT_META.full;
   const emitPublicSourceMaps = process.env.WM_EMIT_SOURCEMAPS === '1'
@@ -992,11 +993,11 @@ export default defineConfig(({ mode }) => {
       htmlVariantPlugin(activeMeta, activeVariant, isDesktopBuild),
       firstPartyChunkManifestPlugin(),
       chunkSizeWarningPolicyPlugin(),
-      !isDesktopBuild && dashboardHtmlOutputPlugin(),
+      !isDesktopBuild && !isMobileBuild && dashboardHtmlOutputPlugin(),
       // Variant subdomain SEO pages only make sense on the web deployment,
       // which is always the 'full' build (variant selection is runtime by
       // hostname). Desktop and dedicated VITE_VARIANT builds skip it.
-      !isDesktopBuild && activeVariant === 'full' && variantDashboardHtmlPlugin(),
+      !isDesktopBuild && !isMobileBuild && activeVariant === 'full' && variantDashboardHtmlPlugin(),
       webMcpDevSecurityHeadersPlugin(),
       polymarketPlugin(),
       rssProxyPlugin(),
@@ -1020,17 +1021,21 @@ export default defineConfig(({ mode }) => {
         includeManifestIcons: false,
 
         manifest: {
-          name: `${activeMeta.siteName} - ${activeMeta.subject}`,
-          short_name: activeMeta.shortName,
+          name: activeVariant === 'full' ? 'GBoheme Intelligence' : `${activeMeta.siteName} - ${activeMeta.subject}`,
+          short_name: activeVariant === 'full' ? 'GBoheme' : activeMeta.shortName,
           description: activeMeta.description,
-          start_url: '/dashboard',
+          start_url: activeVariant === 'full' ? '/dashboard?intelligence=1' : '/dashboard',
           scope: '/',
           display: 'standalone',
           orientation: 'any',
           theme_color: '#0a0f0a',
           background_color: '#0a0f0a',
           categories: activeMeta.categories,
-          icons: [
+          icons: activeVariant === 'full' ? [
+            { src: '/gboheme-icon-192.png', sizes: '192x192', type: 'image/png' },
+            { src: '/gboheme-icon-512.png', sizes: '512x512', type: 'image/png' },
+            { src: '/gboheme-icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          ] : [
             { src: '/favico/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' },
             { src: '/favico/android-chrome-512x512.png', sizes: '512x512', type: 'image/png' },
             { src: '/favico/android-chrome-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
@@ -1040,6 +1045,12 @@ export default defineConfig(({ mode }) => {
         workbox: {
           globPatterns: ['**/*.{js,css,ico,png,svg,woff2}'],
           globIgnores: [
+            // Heavy map, panel, media and secondary-screen chunks stay on demand.
+            // Offline navigation uses the self-contained offline.html snapshot.
+            '**/GlobeMap-*.js',
+            '**/App-*.js',
+            '**/hls-*.js',
+            ...LAZY_HTML_PRELOAD_CHUNKS.map(name => '**/' + name + '-*.js'),
             '**/ml*.js',
             '**/onnx*.wasm',
             '**/locale-*.js',
@@ -1079,6 +1090,16 @@ export default defineConfig(({ mode }) => {
           // are purged with the old precache, so an offline reload after any
           // deploy used to 404 the bundle and blank the dashboard.
           runtimeCaching: [
+            {
+              urlPattern: ({ url, sameOrigin }: { url: URL; sameOrigin: boolean }) =>
+                sameOrigin && /^\/assets\/[^/]+-[A-Za-z0-9_-]+\.(?:js|css|woff2)$/.test(url.pathname),
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'app-assets-on-demand',
+                expiration: { maxEntries: 160, maxAgeSeconds: 30 * 24 * 60 * 60 },
+                cacheableResponse: { statuses: [200] },
+              },
+            },
             {
               urlPattern: ({ url, sameOrigin }: { url: URL; sameOrigin: boolean }) =>
                 sameOrigin && /^\/api\//.test(url.pathname),

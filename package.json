@@ -222,7 +222,14 @@
     "legal:pdfs:check": "node scripts/build-legal-pdfs.mjs --check",
     "docs:dates": "node scripts/generate-docs-page-dates.mjs",
     "docs:dates:check": "node scripts/generate-docs-page-dates.mjs --check",
-    "freeze:github-stars": "node scripts/freeze-github-stars.mjs"
+    "freeze:github-stars": "node scripts/freeze-github-stars.mjs",
+    "build:intelligence": "npm run security:vite-env-secrets -- --strict-local && tsc && vite build",
+    "desktop:gboheme:build": "npm run security:vite-env-secrets -- --strict-local && npm run check:prereqs:desktop:bundle && npm run desktop:check-env && node scripts/prepare-gboheme-node.mjs && cross-env VITE_VARIANT=full VITE_DESKTOP_RUNTIME=1 tauri build --config src-tauri/tauri.gboheme.conf.json",
+    "test:intelligence": "node --import tsx --test tests/personal-news-preferences.test.mts tests/intelligence-engine.test.mts tests/intelligence-connectors-publisher.test.mts tests/intelligence-editor-geography.test.mts tests/intelligence-account.test.mts",
+    "dev:intelligence:mobile": "cross-env VITE_GBOHEME_MOBILE=1 vite",
+    "build:intelligence:mobile": "npm run security:vite-env-secrets -- --strict-local && tsc && cross-env VITE_GBOHEME_MOBILE=1 vite build",
+    "android:gboheme:init": "node scripts/check-gboheme-mobile-prereqs.mjs && cd mobile && tauri android init --ci",
+    "android:gboheme:build": "node scripts/check-gboheme-mobile-prereqs.mjs && cd mobile && tauri android build --apk --ci"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
@@ -270,10 +277,12 @@
     "@deck.gl/layers": "^9.4.0",
     "@deck.gl/maplibre": "^9.4.0",
     "@dodopayments/convex": "^0.2.8",
+    "@fontsource/cairo": "^5.3.0",
     "@fontsource/nunito": "^5.2.7",
     "@fontsource/tajawal": "^5.2.7",
     "@protomaps/basemaps": "^5.7.1",
     "@sentry/browser": "^10.39.0",
+    "@tauri-apps/plugin-opener": "^2.7.1",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.36.1",
     "@vercel/analytics": "^2.0.0",

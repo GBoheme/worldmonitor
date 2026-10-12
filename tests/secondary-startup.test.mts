@@ -73,12 +73,12 @@ describe('secondary dashboard startup', () => {
     assert.deepEqual(dashboardFontFamilies({ variant: 'happy', lang: 'en', dir: '' }), ['nunito']);
   });
 
-  it('loads only Tajawal for the Arabic dashboard, not happy fonts', () => {
-    assert.deepEqual(dashboardFontFamilies({ variant: 'full', lang: 'ar', dir: 'rtl' }), ['tajawal']);
+  it('loads only Cairo for the Arabic dashboard, not happy fonts', () => {
+    assert.deepEqual(dashboardFontFamilies({ variant: 'full', lang: 'ar', dir: 'rtl' }), ['cairo']);
   });
 
-  it('combines Nunito + Tajawal for the Arabic happy dashboard', () => {
-    assert.deepEqual(dashboardFontFamilies({ variant: 'happy', lang: 'ar', dir: 'rtl' }), ['nunito', 'tajawal']);
+  it('combines Nunito + Cairo for the Arabic happy dashboard', () => {
+    assert.deepEqual(dashboardFontFamilies({ variant: 'happy', lang: 'ar', dir: 'rtl' }), ['nunito', 'cairo']);
   });
 });
 

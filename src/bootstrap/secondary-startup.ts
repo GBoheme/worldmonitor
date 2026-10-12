@@ -15,7 +15,7 @@ export interface DashboardFontContext {
   dir?: string | null;
 }
 
-export type DashboardFontFamily = 'nunito' | 'tajawal';
+export type DashboardFontFamily = 'nunito' | 'cairo';
 
 // Which web-font families the dashboard actually needs for a given variant/locale.
 // The default (full variant, LTR/non-Arabic) needs none — its body font is the
@@ -27,7 +27,7 @@ export function dashboardFontFamilies(context: DashboardFontContext = {}): Dashb
   const families: DashboardFontFamily[] = [];
 
   if (variant === 'happy') families.push('nunito');             // happy theme body font
-  if (dir === 'rtl' || lang === 'ar') families.push('tajawal'); // Arabic body font
+  if (dir === 'rtl' || lang === 'ar') families.push('cairo'); // Arabic body font
 
   return families;
 }
@@ -43,10 +43,10 @@ const DASHBOARD_FONT_LOADERS: Record<DashboardFontFamily, () => Promise<unknown>
     import('@fontsource/nunito/700.css'),
     import('@fontsource/nunito/400-italic.css'),
   ]),
-  tajawal: () => Promise.all([
-    import('@fontsource/tajawal/400.css'),
-    import('@fontsource/tajawal/500.css'),
-    import('@fontsource/tajawal/700.css'),
+  cairo: () => Promise.all([
+    import('@fontsource/cairo/400.css'),
+    import('@fontsource/cairo/600.css'),
+    import('@fontsource/cairo/700.css'),
   ]),
 };
 

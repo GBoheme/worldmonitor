@@ -24,6 +24,15 @@ import {
 const SCHEMA = 'worldmonitor-agent-preflight/v1';
 const ACTION_SCHEMA = 'worldmonitor-agent-preflight/v2';
 const MODES = ['review', 'tests', 'repair'];
+
+// Windows cannot spawn npm.cmd without a shell. Run npm's JavaScript entry
+// through Node instead, keeping arguments separate and lifecycle scripts off.
+export function npmInvocation(platform = process.platform, npmExecPath = process.env.npm_execpath,
+  nodeExecPath = process.execPath) {
+  if (platform !== 'win32') return { file: 'npm', prefix: [] };
+  const cli = npmExecPath || join(dirname(nodeExecPath), 'node_modules', 'npm', 'bin', 'npm-cli.js');
+  return { file: nodeExecPath, prefix: [cli] };
+}
 const DEFAULT_NPM_CACHE = '/tmp/worldmonitor-npm-cache';
 const DEFAULT_BOOTSTRAP_TIMEOUT_MS = 10 * 60 * 1000;
 const COMMAND_TIMEOUT_MS = 30_000;
@@ -141,7 +150,8 @@ function runCommand(runner, file, args, options = {}) {
     GIT_TERMINAL_PROMPT: '0',
     ...options.env,
   };
-  return runner(file, args, {
+  const invocation = file === 'npm' && runner === spawnSync ? npmInvocation() : { file, prefix: [] };
+  return runner(invocation.file, [...invocation.prefix, ...args], {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
     timeout: COMMAND_TIMEOUT_MS,
@@ -581,12 +591,14 @@ export function bootstrapOnce(rootDir, npmCacheDir, runner, timeoutMs) {
         timeoutMs,
       };
     }
-    const result = runner('npm', ['ci', '--cache', npmCacheDir, '--ignore-scripts'], {
+    const invocation = runner === spawnSync ? npmInvocation() : { file: 'npm', prefix: [] };
+    const result = runner(invocation.file, [...invocation.prefix, 'ci', '--cache', npmCacheDir, '--ignore-scripts'], {
       cwd: target.path,
       encoding: 'utf8',
       env: {
         PATH: process.env.PATH,
         TMPDIR: process.env.TMPDIR,
+        ...(process.platform === 'win32' ? { SystemRoot: process.env.SystemRoot, TEMP: process.env.TEMP, TMP: process.env.TMP } : {}),
         npm_config_cache: npmCacheDir,
         npm_config_ignore_scripts: 'true',
       },

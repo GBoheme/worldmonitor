@@ -1,0 +1,123 @@
+{
+  "label": "before",
+  "head": "7715efcf9fb5015ca02ab223d6a2cea011271a50",
+  "measuredAt": "2026-10-12T06:51:50.136Z",
+  "browser": "153.0.8010.12",
+  "production": true,
+  "serviceWorkers": "blocked for main-page CPU/heap isolation; built precache size separately measured",
+  "limitations": "Device signals and CPU throttle are simulated. No RAM cap, GPU usage, process RAM, FPS, live-source latency, long-session leak or production deployment measurements.",
+  "jsBytes": 17479016,
+  "jsGzipBytes": 5283471,
+  "precacheEntries": 306,
+  "precacheBytes": 13348451,
+  "rows": [
+    {
+      "profile": {
+        "name": "phone-2gb-signals",
+        "width": 390,
+        "height": 844,
+        "memory": 2,
+        "cores": 2,
+        "cpu": 4
+      },
+      "startupMs": 12969.2325,
+      "refreshMs": 30095.895999999997,
+      "refreshTaskMs": 30087.611,
+      "refreshScriptMs": 122.52099999999993,
+      "heapBefore": 7150404,
+      "heapAfter": 20613320,
+      "networkRequests": 106,
+      "transferredBytes": 2523101,
+      "apiRequests": 30,
+      "refreshApiRequests": 0,
+      "ui": {
+        "cardMutations": 60,
+        "cards": 100,
+        "effective": "unconfigured",
+        "overflow": false
+      },
+      "errors": []
+    },
+    {
+      "profile": {
+        "name": "phone-4gb-signals",
+        "width": 390,
+        "height": 844,
+        "memory": 4,
+        "cores": 4,
+        "cpu": 4
+      },
+      "startupMs": 12545.672599999998,
+      "refreshMs": 30385.781499999997,
+      "refreshTaskMs": 30362.107,
+      "refreshScriptMs": 87.266,
+      "heapBefore": 7125996,
+      "heapAfter": 17616220,
+      "networkRequests": 106,
+      "transferredBytes": 2523101,
+      "apiRequests": 30,
+      "refreshApiRequests": 0,
+      "ui": {
+        "cardMutations": 60,
+        "cards": 100,
+        "effective": "unconfigured",
+        "overflow": false
+      },
+      "errors": []
+    },
+    {
+      "profile": {
+        "name": "desktop-4gb-signals",
+        "width": 1280,
+        "height": 800,
+        "memory": 4,
+        "cores": 4,
+        "cpu": 2
+      },
+      "startupMs": 5237.461199999991,
+      "refreshMs": 13584.9225,
+      "refreshTaskMs": 13572.737,
+      "refreshScriptMs": 41.744,
+      "heapBefore": 7134596,
+      "heapAfter": 14865188,
+      "networkRequests": 104,
+      "transferredBytes": 2492461,
+      "apiRequests": 30,
+      "refreshApiRequests": 0,
+      "ui": {
+        "cardMutations": 60,
+        "cards": 100,
+        "effective": "unconfigured",
+        "overflow": false
+      },
+      "errors": []
+    },
+    {
+      "profile": {
+        "name": "desktop-8gb-signals",
+        "width": 1280,
+        "height": 800,
+        "memory": 8,
+        "cores": 8,
+        "cpu": 1
+      },
+      "startupMs": 2099.9447999999975,
+      "refreshMs": 5351.120999999999,
+      "refreshTaskMs": 5330.691,
+      "refreshScriptMs": 4.966999999999999,
+      "heapBefore": 7132352,
+      "heapAfter": 7289660,
+      "networkRequests": 104,
+      "transferredBytes": 2069146,
+      "apiRequests": 30,
+      "refreshApiRequests": 0,
+      "ui": {
+        "cardMutations": 60,
+        "cards": 100,
+        "effective": "unconfigured",
+        "overflow": false
+      },
+      "errors": []
+    }
+  ]
+}

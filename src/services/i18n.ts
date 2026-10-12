@@ -143,7 +143,7 @@ async function preloadEnglishTranslation(attempt = 0): Promise<void> {
 }
 
 // Initialize i18n
-export async function initI18n({ waitForFullTranslation = false }: { waitForFullTranslation?: boolean } = {}): Promise<void> {
+export async function initI18n({ waitForFullTranslation = false, defaultLocale }: { waitForFullTranslation?: boolean; defaultLocale?: 'ar' | 'en' } = {}): Promise<void> {
   if (i18next.isInitialized) {
     const currentLanguage = normalizeLanguage(i18next.language || 'en');
     await ensureLanguageLoaded(currentLanguage);
@@ -168,6 +168,7 @@ export async function initI18n({ waitForFullTranslation = false }: { waitForFull
   //   whose browser is French always lands on French unless they've explicitly
   //   chosen otherwise via Settings → Language.
   const detector = new LanguageDetector();
+  detector.addDetector({ name: 'wmDefault', lookup: () => defaultLocale, cacheUserLanguage: () => {} });
   detector.addDetector({
     name: 'wmQuery',
     lookup: () => readQueryLanguage(window.location.href),
@@ -196,7 +197,7 @@ export async function initI18n({ waitForFullTranslation = false }: { waitForFull
         escapeValue: false, // not needed for these simple strings
       },
       detection: {
-        order: ['wmQuery', 'wmExplicit', 'navigator'],
+        order: ['wmQuery', 'wmExplicit', 'wmDefault', 'navigator'],
         caches: [], // never auto-write — only changeLanguage() persists
       },
     });

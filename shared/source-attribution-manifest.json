@@ -11,6 +11,9 @@
       "status": "excluded",
       "references": [
         {
+          "path": "scripts/benchmark-gboheme.mjs"
+        },
+        {
           "path": "scripts/measure-trade-animation-rebuild.mjs"
         },
         {
@@ -846,6 +849,9 @@
         },
         {
           "path": "scripts/seed-research.mjs"
+        },
+        {
+          "path": "src/services/intelligence-connectors.ts"
         }
       ]
     },
@@ -4739,6 +4745,15 @@
           "path": "src/services/analytics.ts"
         },
         {
+          "path": "src/services/intelligence-connectors.ts"
+        },
+        {
+          "path": "src/services/intelligence-engine.ts"
+        },
+        {
+          "path": "src/services/intelligence-store.ts"
+        },
+        {
           "path": "src/services/preferences-content.ts"
         }
       ]
@@ -6836,6 +6851,20 @@
       "references": [
         {
           "path": "scripts/seed-climate-ocean-ice.mjs"
+        }
+      ]
+    },
+    {
+      "host": "nodejs.org",
+      "provider": "nodejs.org",
+      "kind": "structured",
+      "observed": true,
+      "license": "Excluded: first-party, control-plane, UI, or rendering transport",
+      "attribution": "Excluded from the external-provider count: not an ingested upstream dataset.",
+      "status": "excluded",
+      "references": [
+        {
+          "path": "scripts/prepare-gboheme-node.mjs"
         }
       ]
     },
@@ -14916,6 +14945,9 @@
         },
         {
           "path": "src/config/live-video-sources.ts"
+        },
+        {
+          "path": "src/services/intelligence-connectors.ts"
         },
         {
           "path": "src/services/live-video/session.ts"

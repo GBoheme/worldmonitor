@@ -1,6 +1,9 @@
 import './styles/base-layer.css';
+import './styles/device-performance.css';
+import { initializeDevicePerformance } from '@/config/device-performance';
 import './bootstrap/zod-csp';
 import { SITE_VARIANT } from '@/config/variant';
+import { isGbohemeMobileRuntime } from '@/services/desktop-runtime';
 import { installLcpAttributionDebug } from '@/bootstrap/lcp-attribution';
 import { markLcpDebug } from '@/utils/lcp-debug';
 import { registerWebMcpTools, type WebMcpAppBindings } from '@/services/webmcp';
@@ -593,6 +596,7 @@ installStaleBundleCheck();
 loadDesktopSecrets().catch(() => {});
 
 // Apply stored theme preference before app initialization (safety net for inline script)
+initializeDevicePerformance();
 applyStoredTheme();
 applyFont();
 applyFontScale();
@@ -623,7 +627,13 @@ safeStorageRemove('wm-settings-open');
 // Standalone windows: ?settings=1 = panel display settings, ?live-channels=1 = channel management
 // Both need i18n initialized so t() does not return undefined.
 const urlParams = new URL(location.href).searchParams;
-if (urlParams.get('settings') === '1') {
+if (urlParams.get('intelligence') === '1' || (isGbohemeMobileRuntime() && urlParams.get('intelligence') !== '0')) {
+  void import('./app/intelligence').then(module => module.initIntelligence()).catch(error => {
+    console.error('[Intelligence] Startup failed:', error);
+    const root = document.getElementById('app');
+    if (root) root.textContent = 'GBoheme Intelligence: تعذر بدء التطبيق. أعد تحميل الصفحة. / Unable to start. Reload this page.';
+  });
+} else if (urlParams.get('settings') === '1') {
   void Promise.all([import('./services/i18n'), import('./settings-window')]).then(
     async ([i18n, m]) => {
       await i18n.initI18n();
