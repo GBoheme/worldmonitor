@@ -13,19 +13,22 @@ export async function summarizeIntelligenceEvent(event: IntelligenceEvent, langu
     // This function is called by the explicit summary action, never by the
     // connector polling loop. Economy boot leaves the worker stopped; honor
     // the existing local-model opt-in before starting it on demand.
-    if (lang === 'en') {
-      const [{ getAiFlowSettings }, { isDesktopRuntime }] = await Promise.all([
-        import('./ai-flow-settings'), import('./runtime'),
-      ]);
-      if (getAiFlowSettings().browserModel || isDesktopRuntime()) {
-        const { mlWorker } = await import('./ml-worker');
-        await mlWorker.init().catch(() => false);
-      }
+    const [{ getAiFlowSettings }, { isDesktopRuntime }] = await Promise.all([
+      import('./ai-flow-settings'), import('./runtime'),
+    ]);
+    const desktop = isDesktopRuntime();
+    if (lang === 'en' && (getAiFlowSettings().browserModel || desktop)) {
+      const { mlWorker } = await import('./ml-worker');
+      await mlWorker.init().catch(() => false);
+      if (!desktop && !getAiFlowSettings().browserModel) mlWorker.terminate();
     }
+    // Re-read after asynchronous startup: a later opt-out remains authoritative.
+    const aiFlow = getAiFlowSettings();
     const { generateSummary } = await import('./summarization');
     // The original provider/entitlement checks remain authoritative. The
     // existing English browser model cannot stand in for an Arabic model.
-    return generateSummary(titles, undefined, undefined, lang, { bodies: context, skipBrowserFallback: lang === 'ar' });
+    return generateSummary(titles, undefined, undefined, lang, { bodies: context, skipCloudProviders: !desktop && !aiFlow.cloudLlm,
+      skipBrowserFallback: lang === 'ar' || (!desktop && !aiFlow.browserModel) });
   });
   return run(headlines, language, bodies);
 }
